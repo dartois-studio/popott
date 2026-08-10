@@ -14,6 +14,14 @@ qui a l'air bizarre : plusieurs solutions évidentes ont été essayées puis ab
   sans jour précis. Les forcer dans une grille quotidienne était faux. D'où le
   multiplicateur `× n fois` plutôt qu'une case par jour.
 - **Unité « sans unité » par défaut** pour un nouvel ingrédient, plutôt que « g ».
+- **Un ingrédient optionnel reste sur la liste de courses**, signalé, plutôt qu'exclu.
+  L'exclure paraissait plus propre, mais le parmesan disparu de la liste ne se rachète
+  jamais : on ne se souvient pas de ce qu'on ne voit pas. La décision de sauter la ligne
+  appartient au magasin, pas à la fiche du plat. Il ne compte en revanche pas dans les
+  manquants de *Trouver une idée* — c'est là qu'il bloquait pour rien.
+- **Optionnel seulement à l'unanimité** dans l'agrégation : le même ingrédient facultatif
+  dans un plat et indispensable dans un autre est un achat obligatoire. Marquer la ligne
+  agrégée « optionnel » ferait rater le plat qui en a vraiment besoin.
 - **Ordre des plats dans un repas conservé** : c'est l'ordre du service.
 - **Un repas vidé de ses plats est supprimé** : balayer sept jours d'affilée ne doit pas
   laisser six coquilles vides derrière soi.
@@ -40,6 +48,11 @@ qui a l'air bizarre : plusieurs solutions évidentes ont été essayées puis ab
   tout doit être atteignable au pouce du premier coup.
 - **Liste de plats en lignes, pas en cartes** : nom en serif, tout le reste sur une ligne
   grise. Même densité d'information, deux fois moins de bruit visuel.
+- **Version affichée à deux endroits, sans redite** : en petit contre le logotype de la
+  bibliothèque, pour la lire d'un coup d'œil ; en tête des Réglages avec la date, le commit
+  et le bouton d'actualisation, pour agir. Le bloc Application était en bas de page, après
+  les rayons et les catégories — or « est-ce que j'ai bien la dernière ? » est la question
+  qu'on se pose en arrivant, pas après trois écrans de défilement.
 - **Le remplissage automatique propose, il ne règle pas.** Les quotas chiffrés
   (« n repas végé », « éviter 21 jours ») étaient arbitraires : remplacés par des préférences
   souples et un dé par repas.

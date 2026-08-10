@@ -14,6 +14,7 @@ const CSS = `
   padding-bottom:100px;box-shadow:0 0 60px rgba(23,36,30,.14);position:relative}
 
 .mc .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.mc .v-mini{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--ink-3);flex:none}
 .mc .title{font-family:var(--display);font-size:29px;letter-spacing:-.02em;line-height:1.05;margin:2px 0 0;font-weight:500}
 .mc h3.sec{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:26px 0 8px;font-weight:600}
 .mc .qty{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
@@ -241,6 +242,10 @@ const CSS = `
 .mc .ing-row input{width:64px;padding:7px 8px;min-height:38px;text-align:right}
 .mc .ing-row select{width:78px;padding:7px 22px 7px 8px;min-height:38px;font-size:13px;
   background-position:calc(100% - 13px) 17px,calc(100% - 8px) 17px}
+.mc .opt-btn{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  border:1.5px solid var(--line);border-radius:999px;padding:0 7px;min-height:38px;color:var(--ink-3);flex:none}
+.mc .ing-row[data-opt="1"] .opt-btn{background:var(--ambre);border-color:var(--ambre);color:var(--creme)}
+.mc .ing-row[data-opt="1"] .nm{color:var(--ink-2)}
 .mc .inline-in{border:0;padding:6px 0;min-height:0;background:transparent;border-radius:0}
 .mc .toast{position:fixed;bottom:98px;left:50%;transform:translateX(-50%);z-index:70;background:var(--ink);
   color:var(--creme);padding:11px 18px;border-radius:999px;font-size:13.5px;font-weight:500;
@@ -308,13 +313,15 @@ function seed() {
   ];
   const ingredients = brut.map((x, i) => ({ id: "i" + i, nom: x[0], rayonId: x[1], unite: x[2], garde: !!x[3] }));
   const ref = (n) => ingredients.find((x) => x.nom === n);
-  const L = (n, q, u) => ({ id: uid(), ingId: ref(n).id, qte: q, unite: u || ref(n).unite });
+  // Le quatrieme argument marque la ligne optionnelle : elle fait partie du
+  // plat, elle ne bloque rien et se saute sans regret en magasin.
+  const L = (n, q, u, opt) => ({ id: uid(), ingId: ref(n).id, qte: q, unite: u || ref(n).unite, optionnel: !!opt });
 
   const plats = [
     { id: "p1", nom: "Gratin de courgettes", saison: "ete", cat: "plat", tags: ["végétarien"], portions: 4, lignes: [L("Courgette", 5), L("Crème fraîche", 200), L("Gruyère râpé", 100), L("Oignon", 1), L("Sel", 1), L("Huile d'olive", 20)] },
     { id: "p2", nom: "Dahl de lentilles corail", saison: "hiver", cat: "plat", tags: ["végétarien", "enfant"], portions: 4, lignes: [L("Lentilles corail", 250), L("Lait de coco", 400), L("Oignon", 1), L("Ail", 2), L("Curry", 2), L("Riz", 250)] },
     { id: "p3", nom: "Poulet basquaise", saison: "ete", cat: "plat", tags: [], portions: 4, lignes: [L("Blanc de poulet", 600), L("Poivron", 3), L("Tomate", 4), L("Oignon", 2), L("Riz", 250), L("Huile d'olive", 20)] },
-    { id: "p4", nom: "Pâtes au pesto maison", saison: "ete", cat: "plat", tags: ["végétarien", "enfant", "rapide"], portions: 4, lignes: [L("Pâtes", 400), L("Basilic", 1), L("Pignons de pin", 40), L("Ail", 1), L("Huile d'olive", 80), L("Gruyère râpé", 60)] },
+    { id: "p4", nom: "Pâtes au pesto maison", saison: "ete", cat: "plat", tags: ["végétarien", "enfant", "rapide"], portions: 4, lignes: [L("Pâtes", 400), L("Basilic", 1), L("Pignons de pin", 40), L("Ail", 1), L("Huile d'olive", 80), L("Gruyère râpé", 60, "", true)] },
     { id: "p5", nom: "Soupe de potiron", saison: "hiver", cat: "entrée", tags: ["végétarien"], portions: 4, lignes: [L("Potiron", 800), L("Pomme de terre", 200), L("Oignon", 1), L("Crème fraîche", 100), L("Bouillon de légumes", 1)] },
     { id: "p6", nom: "Tomates mozzarella", saison: "ete", cat: "entrée", tags: ["végétarien", "rapide"], portions: 4, lignes: [L("Tomate", 4), L("Mozzarella", 250), L("Basilic", 1), L("Huile d'olive", 30)] },
     { id: "p7", nom: "Crêpes", saison: "toute", cat: "goûter", tags: ["enfant"], portions: 6, lignes: [L("Farine", 300), L("Œuf", 3), L("Lait", 600), L("Beurre", 50), L("Sucre", 40)] },
@@ -561,7 +568,7 @@ function SheetPlat({ ctx, plat }) {
     : { id: uid(), nom: "", cat: db.categories.includes("plat") ? "plat" : db.categories[0], saison: "toute", tags: [], portions: 4, lignes: [] });
   const maj = (k, v) => setF((x) => ({ ...x, [k]: v }));
 
-  const addIng = (ing) => setF((x) => ({ ...x, lignes: [...x.lignes, { id: uid(), ingId: ing.id, qte: 1, unite: ing.unite }] }));
+  const addIng = (ing) => setF((x) => ({ ...x, lignes: [...x.lignes, { id: uid(), ingId: ing.id, qte: 1, unite: ing.unite, optionnel: false }] }));
   const creerIng = (nom) => {
     const ni = { id: uid(), nom, rayonId: db.rayons[0].id, unite: "", garde: false };
     up((d) => d.ingredients.push(ni));
@@ -623,20 +630,29 @@ function SheetPlat({ ctx, plat }) {
       <label className="f"><span>Ingrédients — {f.lignes.length}</span></label>
       <IngredientCombo ingredients={db.ingredients} onPick={addIng} onCreate={creerIng} />
       {f.lignes.map((l) => (
-        <div key={l.id} className="ing-row">
-          <span className="nm">{ingOf(l.ingId)?.nom || "Ingrédient supprimé"}</span>
+        <div key={l.id} className="ing-row" data-opt={l.optionnel ? 1 : 0}>
+          <span className="nm">{ingOf(l.ingId)?.nom || "Ingrédient supprimé"}
+            {l.optionnel && <span className="from">optionnel</span>}
+          </span>
           <input type="number" min="0" step="any" value={l.qte} aria-label="Quantité"
             onChange={(e) => maj("lignes", f.lignes.map((x) => x.id === l.id ? { ...x, qte: +e.target.value } : x))} />
           <select value={l.unite} aria-label="Unité"
             onChange={(e) => maj("lignes", f.lignes.map((x) => x.id === l.id ? { ...x, unite: e.target.value } : x))}>
             {UNITES.map((u) => <option key={u || "sans"} value={u}>{u || "— sans unité"}</option>)}
           </select>
+          <button className="opt-btn" aria-pressed={!!l.optionnel}
+            aria-label={l.optionnel ? "Rendre obligatoire" : "Rendre optionnel"}
+            onClick={() => maj("lignes", f.lignes.map((x) => x.id === l.id ? { ...x, optionnel: !x.optionnel } : x))}>opt</button>
           <button className="icon-btn" style={{ width: 34, height: 34 }} aria-label="Retirer l'ingrédient"
             onClick={() => maj("lignes", f.lignes.filter((x) => x.id !== l.id))}><Ic d={IcX} s={16} /></button>
         </div>
       ))}
       {!f.lignes.length && <p className="muted" style={{ fontSize: 13 }}>Sans ingrédients, ce plat n'alimentera pas la liste de courses.</p>}
       <p className="muted" style={{ fontSize: 12.5 }}>Les quantités valent pour {f.portions} parts. Elles seront ajustées au nombre de convives.</p>
+      <p className="muted" style={{ fontSize: 12.5 }}>
+        <b>opt</b> marque un ingrédient optionnel : il reste sur la liste de courses, signalé comme tel,
+        et ne compte plus comme manquant quand on cherche une idée.
+      </p>
     </Sheet>
   );
 }
@@ -748,7 +764,7 @@ function SheetRepas({ ctx, ui, setUi, date: date0, creneauId: cren0 }) {
     ? dispo.map((p) => {
       const ids = p.lignes.map((l) => l.ingId);
       const ok = sel.filter((x) => ids.includes(x)).length;
-      const manque = p.lignes.filter((l) => !sel.includes(l.ingId) && !ingOf(l.ingId)?.garde).length;
+      const manque = p.lignes.filter((l) => !sel.includes(l.ingId) && !l.optionnel && !ingOf(l.ingId)?.garde).length;
       return { ...p, _ok: ok, _manque: manque };
     }).filter((p) => p._ok > 0).sort((a, b) => a._manque - b._manque || b._ok - a._ok)
     : dispo;
@@ -1056,7 +1072,7 @@ const TRIS = [
 
 /* ============================ Écran : bibliothèque ============================ */
 function EcranPlats({ ctx, ui, setUi }) {
-  const { db, setSheet, derniereFois } = ctx;
+  const { db, setSheet, derniereFois, version } = ctx;
   const { q, cat } = ui;
   const tri = ui.tri || "az";
   const rang = (p) => db.plats.indexOf(p);
@@ -1076,7 +1092,12 @@ function EcranPlats({ ctx, ui, setUi }) {
       <header className="top">
         <div style={{ minWidth: 0 }}>
           <div className="eyebrow">{db.plats.length} plats · {(TRIS.find((t) => t.id === tri) || TRIS[0]).nom}</div>
-          <Logo height={26} style={{ color: "var(--aubergine)", marginTop: 5 }} />
+          {/* Le numero se lit contre le bas du logotype : aligne sur la ligne
+              de base, il accompagne la marque sans faire un second titre. */}
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 5 }}>
+            <Logo height={26} style={{ color: "var(--aubergine)" }} />
+            {version && <span className="v-mini">v{version.numero}</span>}
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center" }}>
           <button className="icon-btn" aria-label="Trouver une idée" onClick={() => setSheet({ t: "inverse" })}>
@@ -1222,7 +1243,7 @@ function SheetInverse({ ctx, ui, setUi }) {
     return db.plats.map((p) => {
       const ids = p.lignes.map((l) => l.ingId);
       const ok = sel.filter((s) => ids.includes(s)).length;
-      const manque = p.lignes.filter((l) => !sel.includes(l.ingId) && !ingOf(l.ingId)?.garde);
+      const manque = p.lignes.filter((l) => !sel.includes(l.ingId) && !l.optionnel && !ingOf(l.ingId)?.garde);
       return { p, ok, manque };
     }).filter((x) => x.ok > 0).sort((a, b) => a.manque.length - b.manque.length || b.ok - a.ok);
   }, [sel, db.plats]);
@@ -1957,7 +1978,12 @@ function EcranCourses({ ctx, ui, setUi }) {
                       <span className="box">{it.etat === "done" && <Ic d={IcChk} s={15} />}</span>
                       <span className="lbl">
                         {it.nom}
-                        {it.sources.length > 0 && <span className="from">{it.sources.slice(0, 2).join(", ")}{it.sources.length > 2 ? "…" : ""}</span>}
+                        {(it.sources.length > 0 || it.optionnel) && (
+                          <span className="from">
+                            {it.optionnel && <b style={{ color: "var(--ambre-text)" }}>optionnel{it.sources.length > 0 ? " · " : ""}</b>}
+                            {it.sources.slice(0, 2).join(", ")}{it.sources.length > 2 ? "…" : ""}
+                          </span>
+                        )}
                         {it.manuel && <span className="from">ajouté à la main</span>}
                       </span>
                       <span className="qty">{fmtQ(it.qte)} {it.unite}</span>
@@ -2130,6 +2156,11 @@ function EcranReglages({ ctx, ui, setUi }) {
         </div>
       </header>
       <div className="pad" style={{ paddingTop: 4 }}>
+        {/* En tete de page : « est-ce que j'ai bien la derniere version ? » est
+            la question qu'on se pose en arrivant ici, pas apres avoir fait
+            defiler les rayons et les categories. */}
+        {version && <BlocApplication version={version} surActualiser={surActualiser} flash={flash} />}
+
         <h3 className="sec">Foyer</h3>
         <div className="card">
           {/* `key` sur la valeur : le champ n'est pas contrôlé, et sans ça un
@@ -2189,8 +2220,6 @@ function EcranReglages({ ctx, ui, setUi }) {
           }} />
 
         {compte && <BlocCompte compte={compte} />}
-
-        {version && <BlocApplication version={version} surActualiser={surActualiser} flash={flash} />}
 
         <h3 className="sec">Données</h3>
         <div className="card" style={{ padding: 14 }}>
@@ -2284,11 +2313,15 @@ export default function App({ compte = null, version = null, surActualiser = nul
     const vide = { groupes: [], garde: [], total: 0, restants: 0 };
     if (!db) return vide;
     const map = new Map();
-    const push = (ingId, qte, unite, source) => {
+    /* `optionnel` ne survit qu'a l'unanimite : un ingredient optionnel dans un
+       plat et obligatoire dans un autre reste un achat obligatoire. D'ou le
+       depart a `true`, qui retombe des la premiere source qui en a besoin. */
+    const push = (ingId, qte, unite, source, optionnel) => {
       const k = ingId + "|" + unite;
-      if (!map.has(k)) map.set(k, { key: k, ingId, unite, qte: 0, sources: new Set() });
+      if (!map.has(k)) map.set(k, { key: k, ingId, unite, qte: 0, sources: new Set(), optionnel: true });
       const e = map.get(k);
       e.qte += qte;
+      if (!optionnel) e.optionnel = false;
       if (source) e.sources.add(source);
     };
     db.repas.filter((r) => datesSem.includes(r.date)).forEach((r) => {
@@ -2297,9 +2330,9 @@ export default function App({ compte = null, version = null, surActualiser = nul
         if (!p) return;
         const fois = r.repetitions || 1;
         const coef = (r.convives.length && p.portions ? r.convives.length / p.portions : 1) * fois;
-        p.lignes.forEach((l) => push(l.ingId, (l.qte || 0) * coef, l.unite, p.nom));
+        p.lignes.forEach((l) => push(l.ingId, (l.qte || 0) * coef, l.unite, p.nom, l.optionnel));
       });
-      (r.ajust || []).forEach((a) => { if (a.type === "add" && a.qte > 0) push(a.ingId, a.qte * (r.repetitions || 1), a.unite, "ajustement"); });
+      (r.ajust || []).forEach((a) => { if (a.type === "add" && a.qte > 0) push(a.ingId, a.qte * (r.repetitions || 1), a.unite, "ajustement", false); });
     });
 
     const achetables = [], garde = [];
