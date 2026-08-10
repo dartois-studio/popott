@@ -8,15 +8,17 @@
 | 1 — Proto UX/UI | Quatre écrans, parcours central fonctionnel, données locales | ✅ |
 | 2 — Fonctionnel local | Profils, recherche par ingrédients, anti-répétition, garde-manger, ajustements, semaines types, remplissage automatique | ✅ *(absorbé par le proto)* |
 | 3 — Persistance locale | Sauvegarde sur l'appareil, survit au rechargement | ✅ |
-| 4 — Synchronisation | Stockage en ligne partagé, comptes, temps réel à deux | à faire |
+| 4 — Synchronisation | Stockage en ligne partagé, comptes, temps réel à deux | ✅ |
 | 5 — PWA / finitions | Service worker, hors-ligne, optimisations magasin | à faire |
 
 Le prototype a absorbé les phases 2 et 3 en avance.
 
 ## Prochaine étape concrète
 
-**Vivre une semaine avec.** L'application persiste et tourne sur téléphone : c'est
-maintenant l'usage réel qui dira ce qui manque, pas une liste de fonctionnalités.
+**Vivre une semaine avec, à deux.** L'application persiste, tourne sur téléphone et
+partage désormais ses données entre les appareils du foyer : c'est maintenant l'usage
+réel qui dira ce qui manque, pas une liste de fonctionnalités. La mise en route de la
+synchronisation est décrite dans `07-synchronisation.md`.
 
 En parallèle, indépendant du reste : **découper `Proto.jsx`**. Le fichier est monolithique par
 construction (un prototype se lit d'un bloc), ce qui n'est plus tenable dès qu'on est
@@ -25,11 +27,14 @@ identique.
 
 ## Points encore ouverts
 
-- **Solution de synchro** : Supabase, Firebase, ou autre. Non tranché. Contrainte :
-  deux appareils sur le même foyer, en temps réel, et un mode hors-ligne réel en magasin —
-  donc une résolution de conflit à définir sur la case cochée. Le point d'accroche est déjà
-  isolé : `proto/src/storage.js` expose `get / set / delete / list`, il suffit de remplacer
-  son implémentation.
+- **Service worker** : sans lui, les écritures survivent à la coupure réseau mais
+  l'application ne se *lance* pas hors ligne. C'est ce qui manque pour le magasin.
+- **Un seul document pour tout l'état** : chaque frappe renvoie le document entier au
+  serveur. La fusion à trois voies rend ça sûr, pas léger. Le premier découpage utile
+  serait de sortir `etats` — les cases cochées — dans sa propre clé ; le stockage le
+  supporte déjà, c'est `Proto.jsx` qui n'écrit qu'une seule clé.
+- **Le panneau compte est à l'adresse `#compte`**, hors de l'interface. Une entrée dans
+  les réglages serait plus juste, mais déplacerait des arbitrages de mise en page.
 - **Portions fines par personne** — reporté, voir `03-decisions.md`.
 - **Restes et batch cooking** : un plat qui couvre plusieurs repas. Toucherait le modèle
   du repas planifié et la règle d'agrégation.

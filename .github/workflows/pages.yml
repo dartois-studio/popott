@@ -2,6 +2,17 @@
 # Adresse resultante : https://dartois-studio.github.io/popott/
 #
 # A faire une seule fois, a la main : Settings → Pages → Source → GitHub Actions.
+#
+# ATTENTION — cette voie n'est PAS celle qui sert aujourd'hui. Le site publie
+# est le fichier `index.html` a la racine du depot, regenere a la main par
+# `npm run pages` et pousse avec le reste. Les deux voies marchent, mais pas
+# en meme temps : basculer la source vers GitHub Actions active celle-ci et
+# rend le fichier racine inutile.
+#
+# Pour que la synchronisation fonctionne par cette voie, deux secrets sont
+# necessaires : Settings → Secrets and variables → Actions →
+# SUPABASE_URL et SUPABASE_ANON_KEY. Sans eux le site se construit quand meme,
+# mais chaque appareil reste dans son coin.
 
 name: Publier le proto
 
@@ -37,9 +48,18 @@ jobs:
 
       - name: Construire
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
+      # Sans les secrets : la verification attend l'application elle-meme.
+      # Avec : elle accepte aussi l'ecran de connexion, qui est alors le
+      # premier ecran legitime.
       - name: Verifier que l'application demarre vraiment
         run: npm run verif
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

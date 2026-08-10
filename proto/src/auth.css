@@ -1,0 +1,201 @@
+/* ==========================================================================
+   Popott — ecrans de compte
+
+   Volontairement a part des styles du proto : ces ecrans encadrent
+   l'application, ils n'en font pas partie. Aucune valeur en dur, tout vient
+   des jetons de `brand.css` — meme colonne de 540 px, meme cible de 44 px,
+   meme serif pour les titres.
+   ========================================================================== */
+
+.pop-auth {
+  min-height: 100dvh;
+  background: var(--backdrop);
+  display: flex;
+  justify-content: center;
+  font-family: var(--sans);
+  color: var(--ink);
+}
+
+.pop-auth__colonne {
+  width: 100%;
+  max-width: var(--colonne);
+  background: var(--paper);
+  box-shadow: 0 0 60px rgba(23, 36, 30, 0.14);
+  padding: var(--s-8) var(--s-5) var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.pop-auth__eyebrow {
+  font-family: var(--mono);
+  font-size: var(--t-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.pop-auth__titre {
+  font-family: var(--display);
+  font-size: var(--t-display);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-weight: 500;
+  margin: var(--s-1) 0 0;
+}
+
+.pop-auth__texte {
+  color: var(--ink-2);
+  font-size: var(--t-meta);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pop-auth__champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.pop-auth__label {
+  font-family: var(--mono);
+  font-size: var(--t-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.pop-auth input {
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 16px; /* sous 16 px, iOS zoome au focus */
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.pop-auth input:focus-visible,
+.pop-auth button:focus-visible {
+  outline: 2px solid var(--aubergine);
+  outline-offset: 1px;
+}
+
+.pop-auth__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: var(--cible);
+  padding: 11px 17px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--aubergine);
+  color: var(--creme);
+  font: inherit;
+  font-size: var(--t-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pop-auth__btn:active { transform: scale(0.97); }
+.pop-auth__btn:disabled { opacity: 0.4; cursor: default; }
+
+.pop-auth__btn--ghost {
+  background: transparent;
+  color: var(--aubergine);
+  border: 1.5px solid var(--line);
+}
+
+.pop-auth__lien {
+  background: none;
+  border: 0;
+  padding: var(--s-2);
+  color: var(--aubergine);
+  font: inherit;
+  font-size: var(--t-meta);
+  text-decoration: underline;
+  cursor: pointer;
+  align-self: center;
+}
+
+.pop-auth__erreur {
+  background: #f6e6e6;
+  border: 1px solid #e4caca;
+  color: #8e2f2f;
+  border-radius: var(--r-sm);
+  padding: var(--s-3);
+  font-size: var(--t-meta);
+  margin: 0;
+}
+
+.pop-auth__note {
+  background: var(--aubergine-soft);
+  border-radius: var(--r-sm);
+  padding: var(--s-3);
+  font-size: var(--t-meta);
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.pop-auth__code {
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  word-break: break-all;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: var(--s-3);
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+.pop-auth__sep {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: var(--s-2) 0;
+}
+
+/* Le panneau Compte se pose par-dessus l'application au lieu de la remplacer :
+   la remonter detruirait la semaine consultee, l'onglet, la recherche en cours. */
+.pop-calque {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow-y: auto;
+  background: var(--backdrop);
+}
+
+/* --- Indicateur de liaison ------------------------------------------------
+   Muet quand tout va bien. Il n'apparait que pour dire ce qui ne va pas :
+   une pastille permanente « connecte » serait du bruit sur tous les ecrans. */
+
+.pop-synchro {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--tabbar) + 12px + env(safe-area-inset-bottom));
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: calc(var(--colonne) - var(--s-6));
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  color: var(--creme);
+  font-size: var(--t-meta);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.pop-synchro__point {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ambre);
+  flex: none;
+}

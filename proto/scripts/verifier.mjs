@@ -1,12 +1,20 @@
 /* ==========================================================================
    Popott — verification de fumee
 
-   Charge dist-solo/popott.html dans un DOM simule et verifie que l'application
-   se monte vraiment. Ecrit apres une livraison sur page blanche : le build
-   reussissait, le fichier etait valide, et rien ne s'affichait.
-   Une compilation qui passe ne prouve pas qu'une application demarre.
+   Charge un fichier HTML construit dans un DOM simule et verifie que
+   l'application se monte vraiment. Ecrit apres une livraison sur page
+   blanche : le build reussissait, le fichier etait valide, et rien ne
+   s'affichait. Une compilation qui passe ne prouve pas qu'une application
+   demarre.
 
-   Usage : npm run verif   (lance le build solo, puis controle)
+   Deux fichiers a controler, et ils ne doivent pas montrer la meme chose :
+
+     dist-solo/popott.html   toujours l'application, sans compte ni reseau
+     ../index.html           l'application si la synchronisation est absente,
+                             l'ecran de connexion si elle est configuree
+
+   Usage : node scripts/verifier.mjs [chemin] [--portail]
+           npm run verif   (build solo + build pages + les deux controles)
    ========================================================================== */
 
 import { JSDOM } from "jsdom";
@@ -14,7 +22,12 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const fichier = resolve(dirname(fileURLToPath(import.meta.url)), "../dist-solo/popott.html");
+const ici = dirname(fileURLToPath(import.meta.url));
+const args = process.argv.slice(2);
+const portailAdmis = args.includes("--portail");
+const chemin = args.find((a) => !a.startsWith("--")) || "../dist-solo/popott.html";
+
+const fichier = resolve(ici, chemin);
 const html = readFileSync(fichier, "utf8");
 
 let echec = false;
@@ -32,9 +45,16 @@ for (const url of ["https://exemple.test/", "file:///popott.html"]) {
   const onglets = (rendu.match(/class="lb"/g) || []).length;
   const plats = (rendu.match(/p-nom/g) || []).length;
   const logo = rendu.includes("3349 960");
-  const ok = onglets === 4 && plats > 0 && logo;
 
-  console.log(`${ok ? "ok  " : "ECHEC"} ${url} — ${onglets} onglets, ${plats} plats, logo ${logo ? "present" : "absent"}`);
+  const application = onglets === 4 && plats > 0 && logo;
+  // Le portail se reconnait a sa colonne : un ecran de compte, pas l'appli.
+  const portail = rendu.includes("pop-auth__colonne") && logo;
+
+  const ok = application || (portailAdmis && portail);
+  const quoi = application ? "application" : portail ? "portail de connexion" : "RIEN";
+
+  console.log(`${ok ? "ok  " : "ECHEC"} ${chemin} sur ${url} — ${quoi}`
+    + (application ? ` (${onglets} onglets, ${plats} plats)` : ""));
   if (!ok) echec = true;
   dom.window.close();
 }

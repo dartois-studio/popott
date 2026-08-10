@@ -9,6 +9,11 @@
    utiliser `npm run dev` : rechargement a chaud, et le stockage local
    fonctionne de facon fiable.
 
+   Le fichier solo n'a pas de synchronisation : sans compte, sans reseau,
+   sans serveur. Le portail est donc remplace par un module vide au moment du
+   build — laisse tel quel, l'import dynamique tirerait le client Supabase
+   dans le fichier et le ferait doubler de taille pour rien.
+
    Usage : npm run solo   →   dist-solo/popott.html
    ========================================================================== */
 
@@ -17,6 +22,7 @@ import react from "@vitejs/plugin-react";
 import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sansPortail } from "./sans-portail.mjs";
 
 const ici = dirname(fileURLToPath(import.meta.url));
 const racine = resolve(ici, "..");
@@ -28,7 +34,8 @@ rmSync(tmp, { recursive: true, force: true });
 await build({
   root: racine,
   logLevel: "warn",
-  plugins: [react()],
+  plugins: [react(), sansPortail],
+  envPrefix: "AUCUN_", // ignorer un .env local : le fichier solo reste hors-ligne
   publicDir: false, // ne pas recopier public/ dans le dossier temporaire
   // En mode lib, Vite ne substitue pas process.env.NODE_ENV : React le lit au
   // chargement, et sans cette ligne le fichier s'ouvre sur une page blanche.

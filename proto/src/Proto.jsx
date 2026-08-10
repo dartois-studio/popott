@@ -2131,6 +2131,23 @@ export default function App() {
     return () => { vivant = false; };
   }, []);
 
+  // Un autre appareil du foyer a modifié les données. La couche de
+  // synchronisation a déjà fusionné et écrit le résultat ; il ne reste qu'à
+  // l'adopter. On repose `premier` pour ne pas renvoyer aussitôt au serveur
+  // ce qu'on vient d'en recevoir — sinon deux appareils se répondent en
+  // boucle. Rien d'autre n'est touché : la semaine consultée, l'onglet et la
+  // feuille ouverte restent où ils sont.
+  useEffect(() => {
+    const surDistant = (e) => {
+      const data = e.detail;
+      if (!data || !data.plats) return;
+      premier.current = true;
+      setDb(migrer(data));
+    };
+    window.addEventListener("popott:distant", surDistant);
+    return () => window.removeEventListener("popott:distant", surDistant);
+  }, []);
+
   useEffect(() => {
     if (!db) return;
     if (premier.current) { premier.current = false; return; }

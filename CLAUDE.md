@@ -16,14 +16,18 @@ Ne pas charger tout `doc/` d'un coup. Ouvrir seulement ce qui concerne la tâche
 | Modifier un écran, un composant, un geste | `doc/02-ecrans.md` |
 | Se demander « pourquoi c'est comme ça ? » | `doc/03-decisions.md` |
 | Couleurs, typo, espacements, composants | `doc/05-design-system.md` |
+| Comptes, foyer, fusion, temps réel | `doc/07-synchronisation.md` |
 | Logo, favicon, icône PWA | `doc/06-marque-et-icones.md` |
 | Planifier | `doc/04-roadmap.md` |
 
 ## Règles
 
 **Ne pas toucher aux appels `window.storage`** dans `Proto.jsx`. Ils viennent de
-l'environnement d'origine du prototype et sont réimplémentés par `src/storage.js`.
-C'est ce qui permet au fichier de tourner sans modification ici comme là-bas.
+l'environnement d'origine du prototype et sont réimplémentés par `src/storage.js`
+(local seul) et `src/storage-distant.js` (foyer partagé). C'est ce qui permet au
+fichier de tourner sans modification ici comme là-bas. Une seule addition a été faite
+dans `Proto.jsx` : un écouteur de l'évènement `popott:distant`, qui adopte les
+données venues d'un autre appareil sans perdre l'état d'interface. Il n'appelle rien.
 
 **Le proto fait autorité sur l'UX.** `proto/src/Proto.jsx` est le résultat de plusieurs
 allers-retours de design. Avant de réécrire un comportement, vérifier qu'il n'est pas déjà
@@ -56,11 +60,13 @@ Dans l'ordre où ils ont du sens :
 
 1. **Découpage du proto** — `Proto.jsx` fait 2 270 lignes. Le découper en modules
    (`state/`, `screens/`, `sheets/`, `ui/`) **sans changer un pixel du rendu**.
-2. **Synchronisation** — stockage en ligne partagé, deux comptes sur le même foyer.
-   Tout passe par `proto/src/storage.js` : c'est la seule implémentation à remplacer,
-   l'interface `get / set / delete / list` ne bouge pas. Solution non tranchée.
-3. **PWA** — manifeste et icônes sont en place, le site est publié en HTTPS sur
+2. **PWA** — manifeste et icônes sont en place, le site est publié en HTTPS sur
    GitHub Pages, il manque le service worker et la mise en cache de la liste de courses.
+   C'est ce qui bloque le lancement hors ligne en magasin : la synchronisation garde
+   déjà les écritures faites sans réseau, mais la page elle-même ne se charge pas.
+3. **Découper le document** — tout l'état tient dans une seule clé `menus:v1`, renvoyée
+   en entier à chaque frappe. La fusion à trois voies rend ça sûr, pas léger. Sortir
+   `etats` dans sa propre clé serait le premier gain.
 
 ## Ce qui est volontairement reporté
 

@@ -44,6 +44,31 @@ qui a l'air bizarre : plusieurs solutions évidentes ont été essayées puis ab
   (« n repas végé », « éviter 21 jours ») étaient arbitraires : remplacés par des préférences
   souples et un dé par repas.
 
+## Synchronisation
+
+- **Supabase plutôt que Firebase ou un Worker maison** : Postgres, temps réel natif,
+  et des règles de sécurité qui s'écrivent en SQL à côté du schéma. Firebase masque
+  les conflits au lieu de les traiter ; un Worker aurait demandé du sondage
+  périodique faute de temps réel gratuit.
+- **Comptes e-mail plutôt qu'un code de foyer secret** : le site est publié en clair
+  sur GitHub Pages, et la clé anon est dans le fichier. Seule une vraie authentification
+  permet aux règles de sécurité de distinguer les foyers.
+- **Fusion à trois voies plutôt que dernier écrivain gagnant** : le conflit qui compte
+  n'est pas théorique — l'un coche des cases en magasin pendant que l'autre ajoute un
+  plat à la maison. Comparer l'état local à la dernière version reçue dit ce que *cet*
+  appareil a changé ; on ne rejoue que ça par-dessus la version du serveur.
+- **La fusion ne connaît aucun nom de champ** : la règle se déduit de la forme
+  rencontrée (tableau d'objets à `id`, objet simple, valeur indivisible). Un `switch`
+  sur « plats », « repas », « etats » serait devenu faux au premier champ ajouté.
+- **Le canal temps réel ne transporte pas le document**, seulement son numéro de
+  version. Le document complet pèse des centaines de kilo-octets ; au-delà de la limite
+  du canal, le message serait purement abandonné.
+- **Tri des échos sur la version, pas sur l'auteur** : deux navigateurs du même PC sont
+  souvent connectés au même compte. Se filtrer sur l'identité les rendrait sourds
+  l'un à l'autre.
+- **Panneau compte à l'adresse `#compte`**, hors de l'interface : la maquette ne prévoit
+  pas d'entrée « compte », et en glisser une déplacerait des arbitrages ci-dessus.
+
 ## Reporté volontairement
 
 - **Portions fines par personne** (3 parts végé + 1 part poulet) : les ajustements par

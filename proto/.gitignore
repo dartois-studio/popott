@@ -3,3 +3,7 @@ dist
 dist-solo
 .solo-tmp
 .vite
+
+# La configuration locale de synchro : chacun la sienne.
+.env
+.env.local

@@ -50,10 +50,13 @@ export function installerStockage() {
   };
 }
 
-/** Efface les donnees de Popott. Utile pour repartir des donnees d'exemple. */
+/** Efface les donnees de Popott. Utile pour repartir des donnees d'exemple.
+ *  Inclut les traces de synchronisation (`popott-sync:`) : garder une base de
+ *  comparaison sans le document qu'elle decrit ne produirait que des fusions
+ *  incoherentes au prochain branchement. */
 export function viderStockage() {
   if (typeof window === "undefined") return;
   Object.keys(localStorage)
-    .filter((k) => k.startsWith(PREFIXE))
+    .filter((k) => k.startsWith(PREFIXE) || k.startsWith("popott-sync:"))
     .forEach((k) => localStorage.removeItem(k));
 }

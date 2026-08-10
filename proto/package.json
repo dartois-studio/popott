@@ -10,9 +10,11 @@
     "preview": "vite preview",
     "icons": "node scripts/icons.mjs",
     "solo": "node scripts/solo.mjs",
-    "verif": "npm run solo && node scripts/verifier.mjs"
+    "pages": "node scripts/pages.mjs",
+    "verif": "node scripts/verifier-fusion.mjs && npm run solo && node scripts/verifier.mjs && npm run pages && node scripts/verifier.mjs ../../index.html --portail"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

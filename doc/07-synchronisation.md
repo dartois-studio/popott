@@ -1,0 +1,190 @@
+# Synchronisation
+
+Deux téléphones et deux navigateurs sur les mêmes données. Ce fichier dit
+comment le mettre en route, puis comment ça marche.
+
+---
+
+## Mise en route
+
+Une seule fois, pour le foyer entier. Compter vingt minutes.
+
+### 1. Créer le projet Supabase
+
+Sur [supabase.com](https://supabase.com), *New project*. Le compte GitHub suffit,
+l'offre gratuite couvre largement un foyer. Noter la région (Frankfurt, pour être
+proche) et le mot de passe de la base — il ne resservira pas ici, mais Supabase
+le demande.
+
+### 2. Créer les tables
+
+*SQL Editor* → *New query* → coller tout `supabase/schema.sql` → *Run*.
+
+Le script est rejouable : le relancer ne casse rien. Il crée trois tables
+(`foyers`, `membres`, `documents`), les règles de sécurité, trois fonctions,
+et ouvre le canal temps réel.
+
+### 3. Simplifier l'inscription
+
+*Authentication* → *Sign In / Providers* → *Email* → décocher **Confirm email**.
+
+Sans ça, chaque création de compte attend un clic dans un e-mail. Pour deux
+comptes dans une maison, c'est une friction sans contrepartie. L'application
+gère les deux cas, mais autant s'épargner l'aller-retour.
+
+### 4. Brancher l'application
+
+*Project Settings* → *API*. Copier l'URL du projet et la clé **anon public**
+dans un fichier `proto/.env` :
+
+```
+VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOi…
+```
+
+`proto/.env.example` sert de modèle. Le fichier `.env` n'est pas versionné.
+
+> Ces deux valeurs sont **publiques par construction** : elles finissent dans le
+> fichier publié, et c'est prévu. Ce qui protège les données, c'est le *row level
+> security* du schéma — la clé anon ne donne accès à rien sans compte, et un
+> compte ne voit que son foyer. La clé **service_role**, elle, ne doit jamais
+> sortir de Supabase.
+
+### 5. Publier
+
+```bash
+cd proto
+npm run pages     # regénère index.html à la racine, avec la synchro dedans
+```
+
+Le script annonce en clair s'il a trouvé la configuration ou non. Puis commiter
+et pousser (`sync.bat` fait les deux).
+
+### 6. Le premier appareil
+
+Ouvrir le site, créer un compte, puis **Créer un foyer**. Les données déjà
+présentes sur cet appareil deviennent celles du foyer — rien n'est perdu.
+
+Aller ensuite sur `…github.io/popott/#compte` pour lire le **code du foyer**.
+
+### 7. Les autres appareils
+
+Sur chaque téléphone et chaque navigateur : ouvrir le site, créer un compte
+(ou se connecter avec le même), coller le code dans **Rallier un foyer
+existant**.
+
+⚠ Sur un appareil qui a déjà servi, ses données locales ne remontent pas :
+c'est le foyer qui gagne, et le local est remplacé. Faire le pas 6 depuis
+l'appareil qui a les vraies données.
+
+---
+
+## Comment ça marche
+
+### Le point d'accroche n'a pas bougé
+
+`window.storage` expose toujours `get / set / delete / list`. `Proto.jsx`
+ignore qu'il y a un serveur derrière. Deux implémentations coexistent :
+
+| Fichier | Quand |
+|---|---|
+| `src/storage.js` | pas de configuration Supabase — localStorage seul, comme avant |
+| `src/storage-distant.js` | un compte et un foyer — localStorage **et** serveur |
+
+### Trois valeurs par clé
+
+```
+popott:<clé>                ce que l'application croit vrai (le cache)
+popott-sync:base:<clé>      la dernière version reçue du serveur
+popott-sync:version:<clé>   son numéro de version
+```
+
+L'écart entre le cache et la base, c'est exactement ce que cet appareil a
+changé et qui n'est pas encore parti.
+
+### Le local d'abord
+
+Toute écriture va dans localStorage immédiatement, puis part vers le serveur
+après 700 ms. Réseau coupé, téléphone endormi au rayon surgelés : rien n'est
+perdu, la poussée reprend au retour — au retour du réseau, au réveil de
+l'onglet, ou à la reconnexion du canal temps réel.
+
+### Personne n'écrase personne
+
+Chaque document porte un numéro de version. Une écriture dit « je remplace la
+version 12 » ; si le serveur en est à la 13, la mise à jour ne touche aucune
+ligne. Le client sait alors qu'il doit fusionner avant de réessayer.
+
+C'est le rôle de `src/fusion.js`, une fusion à trois voies :
+
+- **base** — le document tel qu'on l'avait reçu ;
+- **mien** — ce qu'on en a fait depuis ;
+- **distant** — ce que le serveur contient maintenant.
+
+Comparer *mien* à *base* dit ce que **j'ai** changé, et rien d'autre. On repart
+donc de *distant* et on ne rejoue par-dessus que mes changements à moi.
+
+Aucun nom de champ n'est écrit dans `fusion.js`. La règle se déduit de la forme :
+
+| Forme rencontrée | Règle |
+|---|---|
+| tableau d'objets à `id` | appariement par `id`, élément par élément |
+| objet simple | clé par clé, en descendant |
+| tout le reste | si je l'ai touché, ma valeur ; sinon la sienne |
+
+Ce qui couvre les plats, les repas, les ajustements et la carte des cases
+cochées sans jamais nommer « plats », « repas » ni « états ».
+
+Les cas sont vérifiés : `node scripts/verifier-fusion.mjs`, inclus dans
+`npm run verif`. C'est la seule pièce qui puisse perdre des données en
+silence — on ne verrait pas le bug à l'écran, on verrait un plat disparu
+trois jours plus tard.
+
+### Les autres appareils sont prévenus
+
+Un canal temps réel signale « la clé X est passée en version N ». Le contenu
+ne transite **pas** par le canal : le document complet peut peser plusieurs
+centaines de kilo-octets et saturerait la liaison. Le client reçoit le
+signal, va chercher la valeur par l'API normale, fusionne si besoin, puis
+émet un évènement `popott:distant`.
+
+`Proto.jsx` l'écoute et remplace ses données. La semaine consultée, l'onglet
+ouvert et la recherche en cours ne bougent pas : seul `db` est remplacé.
+
+Le tri se fait sur la **version**, pas sur l'identité de l'auteur : deux
+navigateurs du même PC sont souvent connectés au même compte, et se filtrer
+sur l'identité les rendrait sourds l'un à l'autre.
+
+### Les comptes
+
+Un compte par personne, un foyer par maison. Le foyer est l'unité de partage,
+et il se rallie par son code — l'identifiant du foyer, affiché dans le
+panneau `#compte`.
+
+Les règles de sécurité tiennent en une phrase : **on ne voit que les documents
+du foyer dont on est membre**. Aucune politique d'insertion n'existe sur
+`foyers` ni `membres` ; la création et le ralliement passent obligatoirement
+par les fonctions `creer_foyer` et `rejoindre_foyer`. Impossible de s'inviter
+dans un foyer au hasard.
+
+---
+
+## Ce qui reste ouvert
+
+- **Le panneau compte est à l'adresse `#compte`**, pas dans les réglages. La
+  maquette du proto ne prévoit pas d'entrée « compte », et en glisser une au
+  chausse-pied déplacerait des arbitrages écrits dans `03-decisions.md`. Le jour
+  où une entrée est ajoutée, elle n'aura qu'à pointer là.
+
+- **Hors ligne, l'application doit déjà être ouverte.** Les écritures survivent
+  à la coupure, mais lancer le site sans réseau ne charge rien : il manque le
+  service worker. C'est la phase 5.
+
+- **Un seul document pour tout l'état.** Chaque frappe renvoie le document
+  entier. La fusion rend ça sûr, mais pas léger. Si ça devient gênant, sortir
+  `etats` (les cases cochées) dans sa propre clé est le premier découpage
+  utile — et le stockage le supporte déjà, c'est `Proto.jsx` qui n'écrit
+  qu'une clé.
+
+- **Pas de gestion de sortie de foyer** dans l'interface. La règle SQL existe
+  (un membre peut se retirer lui-même), le bouton non.

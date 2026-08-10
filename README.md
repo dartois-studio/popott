@@ -13,6 +13,7 @@ et en déduire automatiquement la liste de courses.
 |---|---|
 | `doc/` | Le cahier des charges, découpé en fichiers courts. Point d'entrée : [`doc/00-projet.md`](doc/00-projet.md) |
 | `proto/` | Le prototype UX/UI, application Vite + React |
+| `supabase/` | Le schéma SQL de la synchronisation, à exécuter une fois |
 | `.github/workflows/` | Publication automatique du proto sur GitHub Pages |
 | `icons/` | Les sources de marque : logotype et icône, en SVG |
 | `CLAUDE.md` | Consignes de travail pour Claude Code |
@@ -53,8 +54,29 @@ npm run dev
 Ouvrir `proto/index.html` directement ne marche pas : il faut passer par Vite.
 Pour une version en un seul fichier, ouvrable d'un double-clic : `npm run solo`.
 
-Le prototype est autonome : aucun backend, aucune dépendance en dehors de React.
-Les données sont sauvegardées sur l'appareil et survivent au rechargement.
+Le prototype tourne tel quel, sans compte ni backend : les données sont
+sauvegardées sur l'appareil et survivent au rechargement. Pour une version en un
+seul fichier, ouvrable d'un double-clic et toujours hors ligne : `npm run solo`.
+
+## Partager entre plusieurs appareils
+
+Deux téléphones et deux navigateurs sur les mêmes menus, en temps réel, avec un
+mode hors-ligne qui ne perd rien en magasin.
+
+La marche à suivre complète est dans
+[`doc/07-synchronisation.md`](doc/07-synchronisation.md) — compter vingt minutes,
+une seule fois. En résumé :
+
+1. créer un projet sur [supabase.com](https://supabase.com) ;
+2. y exécuter `supabase/schema.sql` ;
+3. copier l'URL et la clé *anon* dans `proto/.env` (modèle : `proto/.env.example`) ;
+4. `npm run pages`, puis pousser ;
+5. sur le premier appareil : créer un compte, créer un foyer, relever le code
+   affiché sur `…/popott/#compte` ;
+6. sur les autres : créer un compte, coller ce code.
+
+Sans `proto/.env`, tout continue de fonctionner en local seul — aucun compte,
+aucune requête réseau.
 
 ## État
 
@@ -64,7 +86,7 @@ Les données sont sauvegardées sur l'appareil et survivent au rechargement.
 | 1 | Proto UX/UI — quatre écrans, parcours central | ✅ |
 | 2 | Fonctionnel local — absorbé par le proto | ✅ |
 | 3 | Persistance locale — survit au rechargement | ✅ |
-| 4 | Synchronisation à deux | à faire |
+| 4 | Synchronisation à deux | ✅ |
 | 5 | PWA, hors-ligne, finitions magasin | à faire |
 
 Détail dans [`doc/04-roadmap.md`](doc/04-roadmap.md).
