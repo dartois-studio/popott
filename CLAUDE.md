@@ -40,6 +40,11 @@ l'agrégation des quantités. Un ajout à la volée crée une entrée réutilisa
 **Mobile d'abord.** Colonne de 540 px maximum, cible tactile de 44 px minimum, une action
 principale par écran. Le desktop est un élargissement, pas une refonte.
 
+**Chemins relatifs.** `base: "./"` dans `vite.config.js`, et des chemins relatifs dans
+`index.html` et le manifeste : le site est publié dans un sous-dossier (`/popott/`).
+Un chemin absolu casse la mise en ligne sans casser le mode développement — donc ça ne se
+voit qu'après le push.
+
 **Français partout** : interface, noms de variables métier, commentaires, commits.
 
 **Design system avant improvisation.** Les couleurs et les espacements viennent de
@@ -54,8 +59,8 @@ Dans l'ordre où ils ont du sens :
 2. **Synchronisation** — stockage en ligne partagé, deux comptes sur le même foyer.
    Tout passe par `proto/src/storage.js` : c'est la seule implémentation à remplacer,
    l'interface `get / set / delete / list` ne bouge pas. Solution non tranchée.
-3. **PWA** — manifeste et icônes sont déjà en place dans `proto/public/`, il manque le
-   service worker et la mise en cache de la liste de courses.
+3. **PWA** — manifeste et icônes sont en place, le site est publié en HTTPS sur
+   GitHub Pages, il manque le service worker et la mise en cache de la liste de courses.
 
 ## Ce qui est volontairement reporté
 

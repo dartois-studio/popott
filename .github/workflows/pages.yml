@@ -1,0 +1,56 @@
+# Publie le prototype sur GitHub Pages a chaque push sur main.
+# Adresse resultante : https://dartois-studio.github.io/popott/
+#
+# A faire une seule fois, a la main : Settings → Pages → Source → GitHub Actions.
+
+name: Publier le proto
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # permet de relancer a la main depuis l'onglet Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construire:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: proto
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer
+        run: npm install
+
+      - name: Construire
+        run: npm run build
+
+      - name: Verifier que l'application demarre vraiment
+        run: npm run verif
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: proto/dist
+
+  publier:
+    needs: construire
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - id: deploiement
+        uses: actions/deploy-pages@v4

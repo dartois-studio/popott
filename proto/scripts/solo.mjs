@@ -30,6 +30,9 @@ await build({
   logLevel: "warn",
   plugins: [react()],
   publicDir: false, // ne pas recopier public/ dans le dossier temporaire
+  // En mode lib, Vite ne substitue pas process.env.NODE_ENV : React le lit au
+  // chargement, et sans cette ligne le fichier s'ouvre sur une page blanche.
+  define: { "process.env.NODE_ENV": JSON.stringify("production") },
   build: {
     outDir: tmp,
     emptyOutDir: true,

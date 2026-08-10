@@ -12,11 +12,17 @@ et en déduire automatiquement la liste de courses.
 | Dossier | Contenu |
 |---|---|
 | `doc/` | Le cahier des charges, découpé en fichiers courts. Point d'entrée : [`doc/00-projet.md`](doc/00-projet.md) |
-| `proto/` | Le prototype UX/UI, application Vite + React à lancer en local |
+| `proto/` | Le prototype UX/UI, application Vite + React |
+| `.github/workflows/` | Publication automatique du proto sur GitHub Pages |
 | `icons/` | Les sources de marque : logotype et icône, en SVG |
 | `CLAUDE.md` | Consignes de travail pour Claude Code |
 
-## Lancer le prototype
+## Voir le prototype
+
+**https://dartois-studio.github.io/popott/** — publié automatiquement à chaque push.
+C'est l'adresse à ouvrir sur le téléphone.
+
+## Lancer le prototype en local
 
 ```bash
 cd proto

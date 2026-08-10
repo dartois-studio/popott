@@ -16,6 +16,7 @@ Si Node n'est pas installé, ou pour montrer le proto à quelqu'un :
 
 ```bash
 npm run solo    # → dist-solo/popott.html
+npm run verif   # construit, puis vérifie que l'application démarre vraiment
 ```
 
 Un fichier HTML unique et autonome, React compris, qui s'ouvre d'un double-clic.
@@ -24,6 +25,19 @@ retombe alors en mémoire seule et oublie tout au rechargement. Pour travailler,
 
 `--host` est déjà actif : l'adresse réseau affichée par Vite s'ouvre depuis le téléphone
 sur le même Wi-Fi. C'est la seule façon honnête de juger l'écran Courses.
+
+## Le voir en ligne
+
+Chaque `git push` sur `main` publie le proto sur
+**https://dartois-studio.github.io/popott/** — c'est l'adresse à ouvrir sur le téléphone,
+et celle depuis laquelle l'installer sur l'écran d'accueil.
+
+Le workflow est dans `.github/workflows/pages.yml`. À faire **une seule fois** dans GitHub :
+*Settings → Pages → Source → GitHub Actions*.
+
+Le build utilise `base: "./"` : chemins relatifs partout, donc le site fonctionne aussi bien
+à la racine d'un domaine que dans le sous-dossier `/popott/`. Ne pas repasser en chemins
+absolus.
 
 ## Ce qu'il fait
 
@@ -47,6 +61,7 @@ Elles ne sont pas encore partagées entre deux téléphones — c'est la phase 4
 | `public/` | Manifeste PWA et icônes générées |
 | `scripts/icons.mjs` | `npm run icons` — régénère les icônes depuis `/icons` |
 | `scripts/solo.mjs` | `npm run solo` — fabrique le HTML autonome |
+| `scripts/verifier.mjs` | `npm run verif` — vérifie que l'app se monte, pas seulement qu'elle compile |
 
 ## Le point sensible : `storage.js`
 
@@ -65,6 +80,13 @@ Pour repartir des données d'exemple, dans la console du navigateur :
 ```js
 Object.keys(localStorage).filter(k => k.startsWith("popott:")).forEach(k => localStorage.removeItem(k));
 ```
+
+## Un piège du build autonome
+
+En mode bibliothèque, Vite ne substitue pas `process.env.NODE_ENV`. React le lit au
+chargement : sans la ligne `define` de `scripts/solo.mjs`, le build réussit, le fichier est
+valide, et la page est blanche. D'où `npm run verif` : une compilation qui passe ne prouve
+pas qu'une application démarre.
 
 ## Ce qui a été adapté depuis le fichier d'origine
 
