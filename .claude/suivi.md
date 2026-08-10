@@ -1,8 +1,8 @@
 # Suivi popott
 
-_Généré le 10/08/2026 17:28:02. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
+_Généré le 10/08/2026 17:46:46. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
 
-_Convention : au terme du code, chaque IA renseigne `codedWith` sur chaque ticket avec son nom exact avant tout passage à `Fait`._
+_Convention : au terme du code, l’IA renseigne `codedWith` sur chaque ticket avec `Claude Code`, `ChatGPT`, `Mixte` ou le nom exact de toute autre IA avant tout passage à `Fait`._
 
 ## Résumé
 
@@ -38,7 +38,7 @@ Trois gardes ajoutées à `npm run verif`, sur les pannes qui ne se voient qu'ap
 
 `sync.bat` attend désormais la publication et annonce quand c'est en ligne, ou pourquoi ça a échoué.
 
-<sub>créé le 2026-08-10 · Codé avec Claude Code</sub>
+<sub>créé le 2026-08-10 · maj 2026-08-10T15:46:46.349Z · Codé avec Claude Code</sub>
 
 #### POP-001 · Bug · P1 · Interface
 **Le titre de rayon se place au milieu des articles dans la liste de courses**
