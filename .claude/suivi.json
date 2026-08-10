@@ -1,5 +1,5 @@
 {
-  "nextId": 3,
+  "nextId": 4,
   "entries": [
     {
       "n": 1,
@@ -28,6 +28,20 @@
       "captures": [],
       "updated": "2026-08-10T15:46:46.349Z",
       "codedWith": "Claude Code"
+    },
+    {
+      "n": 3,
+      "created": "2026-08-10T16:13:01.961Z",
+      "title": "Découper App.jsx : 2 430 lignes dans un seul fichier",
+      "desc": "Le prototype tenait dans un fichier unique : les quatre écrans, les quatorze panneaux, la feuille de style et les outils. Monolithique par construction — un proto se lit d'un bloc — mais intenable dès qu'on intervient dessus à plusieurs. C'était le chantier n°1 de CLAUDE.md.\n\nRéparti en seize modules : `ecrans/`, `feuilles/`, `ui/` (styles, icônes, briques), plus `outils.js` et `exemple.js`. `App.jsx` ne fait plus que l'assemblage — état du document, contexte, onglets, panneau ouvert — en 209 lignes. Plus gros fichier restant : `feuilles/Repas.jsx`, 317 lignes.\n\nPur déplacement : le code des déclarations n'a pas été retouché d'un octet, seuls s'ajoutent les en-têtes, les `import` et les `export`. Un symbole n'est exporté que s'il franchit une frontière de fichier — six restent internes. Aucun cycle entre modules, 194 imports, aucun superflu.\n\n**Deux preuves plutôt qu'une intuition.** Statique : les 82 déclarations (127 Ko) comparées une à une avec l'ancien fichier, toutes identiques octet pour octet. Dynamique : `scripts/empreinte.mjs`, écrit pour l'occasion, monte l'application dans un DOM simulé, parcourt les quatre écrans, ouvre les panneaux et enregistre le DOM de chaque état — 20 états identiques avant/après, feuille de style comprise.\n\nL'empreinte a rattrapé un import manquant (`MOIS`) que la compilation laissait passer et qui cassait l'écran Semaine à l'exécution : mon extracteur de dépendances ignorait le contenu des interpolations `${…}`.\n\n**Reste à vérifier à la main** : le balayage n'atteint que 11 des 14 panneaux. Copie de semaine, semaines types, remplissage automatique et fiche ingrédient ne sont couverts que par la preuve statique.",
+      "type": "Autre",
+      "dom": "Global",
+      "lot": "",
+      "prio": "P1",
+      "stat": "Fait",
+      "captures": [],
+      "updated": "2026-08-10T16:13:01.961Z",
+      "codedWith": "Claude Code"
     }
   ],
   "categories": [
@@ -49,5 +63,5 @@
     "categories": "Interface",
     "types": "Feature"
   },
-  "savedAt": "2026-08-10T15:46:46.753Z"
+  "savedAt": "2026-08-10T16:13:01.961Z"
 }

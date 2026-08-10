@@ -1,8 +1,8 @@
 # Suivi popott
 
-_Généré le 10/08/2026 17:46:46. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
+_Généré le 10/08/2026 18:13:10. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
 
-_Convention : au terme du code, l’IA renseigne `codedWith` sur chaque ticket avec `Claude Code`, `ChatGPT`, `Mixte` ou le nom exact de toute autre IA avant tout passage à `Fait`._
+_Convention : au terme du code, chaque IA renseigne `codedWith` sur chaque ticket avec son nom exact avant tout passage à `Fait`._
 
 ## Résumé
 
@@ -11,19 +11,20 @@ _Convention : au terme du code, l’IA renseigne `codedWith` sur chaque ticket a
 | À faire | 0 | 0 | 0 | 0 | 0 |
 | En cours | 0 | 0 | 0 | 0 | 0 |
 | En PR | 0 | 0 | 0 | 0 | 0 |
-| Fait | 1 | 1 | 0 | 0 | 2 |
+| Fait | 1 | 2 | 0 | 0 | 3 |
 | Parké | 0 | 0 | 0 | 0 | 0 |
-| **Total** | 1 | 1 | 0 | 0 | **2** |
+| **Total** | 1 | 2 | 0 | 0 | **3** |
 
 ## Par lot
 
-### Sans lot (backlog non planifié) — 2
+### Sans lot (backlog non planifié) — 3
 - POP-002 · P0 · **Fait** · _Autre_ — Deux voies de publication concurrentes : le site tournait sans synchronisation · Codé avec **Claude Code**
 - POP-001 · P1 · **Fait** · _Bug_ — Le titre de rayon se place au milieu des articles dans la liste de courses · Codé avec **Claude Code**
+- POP-003 · P1 · **Fait** · _Autre_ — Découper App.jsx : 2 430 lignes dans un seul fichier · Codé avec **Claude Code**
 
 ## Détail par statut
 
-### Fait (2)
+### Fait (3)
 
 #### POP-002 · Autre · P0 · Global
 **Deux voies de publication concurrentes : le site tournait sans synchronisation**
@@ -52,3 +53,20 @@ Correctif : `overflow:clip` au lieu de `hidden`. Même rognage aux coins arrondi
 Dégradation si `overflow:clip` n'est pas connu du navigateur : le sticky fonctionne quand même, seuls les coins hauts du ticket redeviennent carrés.
 
 <sub>créé le 2026-08-10 · Codé avec Claude Code</sub>
+
+#### POP-003 · Autre · P1 · Global
+**Découper App.jsx : 2 430 lignes dans un seul fichier**
+
+Le prototype tenait dans un fichier unique : les quatre écrans, les quatorze panneaux, la feuille de style et les outils. Monolithique par construction — un proto se lit d'un bloc — mais intenable dès qu'on intervient dessus à plusieurs. C'était le chantier n°1 de CLAUDE.md.
+
+Réparti en seize modules : `ecrans/`, `feuilles/`, `ui/` (styles, icônes, briques), plus `outils.js` et `exemple.js`. `App.jsx` ne fait plus que l'assemblage — état du document, contexte, onglets, panneau ouvert — en 209 lignes. Plus gros fichier restant : `feuilles/Repas.jsx`, 317 lignes.
+
+Pur déplacement : le code des déclarations n'a pas été retouché d'un octet, seuls s'ajoutent les en-têtes, les `import` et les `export`. Un symbole n'est exporté que s'il franchit une frontière de fichier — six restent internes. Aucun cycle entre modules, 194 imports, aucun superflu.
+
+**Deux preuves plutôt qu'une intuition.** Statique : les 82 déclarations (127 Ko) comparées une à une avec l'ancien fichier, toutes identiques octet pour octet. Dynamique : `scripts/empreinte.mjs`, écrit pour l'occasion, monte l'application dans un DOM simulé, parcourt les quatre écrans, ouvre les panneaux et enregistre le DOM de chaque état — 20 états identiques avant/après, feuille de style comprise.
+
+L'empreinte a rattrapé un import manquant (`MOIS`) que la compilation laissait passer et qui cassait l'écran Semaine à l'exécution : mon extracteur de dépendances ignorait le contenu des interpolations `${…}`.
+
+**Reste à vérifier à la main** : le balayage n'atteint que 11 des 14 panneaux. Copie de semaine, semaines types, remplissage automatique et fiche ingrédient ne sont couverts que par la preuve statique.
+
+<sub>créé le 2026-08-10T16:13:01.961Z · Codé avec Claude Code</sub>
