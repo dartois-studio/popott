@@ -146,7 +146,10 @@ const CSS = `
   color:var(--ink-3);width:52px;flex:none;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mc .plat-nom{font-family:var(--display);font-size:16.5px;line-height:1.25;flex:1;min-width:0}
 
-.mc .ticket{background:var(--surface);border:1px solid var(--line);border-radius:var(--r) var(--r) 0 0;overflow:hidden}
+/* clip et non hidden : les deux rognent aux coins arrondis, mais hidden fait du ticket
+   un conteneur de defilement, et les en-tetes de rayon en position sticky se calaient
+   alors a 69px du haut du ticket — le premier rayon tombait au milieu de ses articles. */
+.mc .ticket{background:var(--surface);border:1px solid var(--line);border-radius:var(--r) var(--r) 0 0;overflow:clip}
 .mc .ticket-edge{height:12px;background:var(--surface);border-left:1px solid var(--line);border-right:1px solid var(--line);
   -webkit-mask-image:radial-gradient(circle 7px at 8px 12px,transparent 98%,#000 100%);
   -webkit-mask-size:16px 12px;-webkit-mask-repeat:repeat-x;
