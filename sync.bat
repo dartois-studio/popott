@@ -55,15 +55,28 @@ if errorlevel 1 (
 
 echo Publication en cours, patiente...
 echo.
-timeout /t 6 >nul
-for /f "usebackq tokens=*" %%i in (`gh run list --limit 1 --json databaseId --jq ".[0].databaseId"`) do set "RUNID=%%i"
 
-if "%RUNID%"=="" (
-  echo Impossible de retrouver la publication en cours. Verifie l'onglet Actions.
-  echo.
-  pause
-  exit /b 0
+REM On attend la publication de CE commit precisement. Prendre simplement la
+REM plus recente annoncerait un faux succes en repechant celle d'avant.
+for /f "usebackq tokens=*" %%i in (`git rev-parse HEAD`) do set "SHA=%%i"
+set "RUNID="
+set "ESSAIS=0"
+
+:attente
+for /f "usebackq tokens=*" %%i in (`gh run list --commit %SHA% --limit 1 --json databaseId --jq ".[0].databaseId"`) do set "RUNID=%%i"
+if not "%RUNID%"=="" goto trouve
+set /a ESSAIS+=1
+if %ESSAIS% lss 12 (
+  timeout /t 5 >nul
+  goto attente
 )
+
+echo Impossible de retrouver la publication en cours. Verifie l'onglet Actions.
+echo.
+pause
+exit /b 0
+
+:trouve
 
 gh run watch %RUNID% --exit-status >nul
 if errorlevel 1 (

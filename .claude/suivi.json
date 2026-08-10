@@ -1,6 +1,35 @@
 {
-  "nextId": 1,
-  "entries": [],
+  "nextId": 3,
+  "entries": [
+    {
+      "n": 1,
+      "created": "2026-08-10",
+      "title": "Le titre de rayon se place au milieu des articles dans la liste de courses",
+      "desc": "« Fruits et légumes » s'affichait entre Basilic et Courgette au lieu d'être en tête de son rayon.\n\nCause : `.ticket` portait `overflow:hidden` pour arrondir ses coins, ce qui en faisait un conteneur de défilement. Les en-têtes de rayon, en `position:sticky; top:69px`, se calaient donc à 69 px du haut du ticket au lieu du haut de la page. Le ticket ne défilant jamais, le premier en-tête était poussé une fois pour toutes de 69 px — un peu plus qu'une ligne de 56 px. Les rayons suivants ne bougeaient pas, leur position naturelle étant déjà au-delà du seuil.\n\nCorrectif : `overflow:clip` au lieu de `hidden`. Même rognage aux coins arrondis, mais sans créer de conteneur de défilement. Bénéfice au passage : les en-têtes de rayon s'épinglent enfin sous celui de l'écran pendant le défilement — le comportement voulu depuis le début, qui n'avait jamais pu s'exercer.\n\nDégradation si `overflow:clip` n'est pas connu du navigateur : le sticky fonctionne quand même, seuls les coins hauts du ticket redeviennent carrés.",
+      "type": "Bug",
+      "dom": "Interface",
+      "lot": "",
+      "prio": "P1",
+      "stat": "Fait",
+      "captures": [],
+      "updated": "2026-08-10",
+      "codedWith": "Claude Code"
+    },
+    {
+      "n": 2,
+      "created": "2026-08-10",
+      "title": "Deux voies de publication concurrentes : le site tournait sans synchronisation",
+      "desc": "Le dépôt publiait par deux chemins à la fois, tous deux déclenchés à chaque envoi : un `index.html` de 477 Ko régénéré à la main à la racine, et le workflow GitHub Actions. Ils écrivaient sur le même site, le workflow finissant systématiquement une dizaine de secondes après — il gagnait donc toujours.\n\nDeux conséquences. Le fichier construit à la main n'a jamais été servi une seule fois. Et comme le workflow n'avait pas les clés Supabase (elles ne vivaient que dans `app/.env`, en local), le site en ligne tournait sans compte ni foyer partagé : chaque appareil dans son coin, sans que rien ne le signale.\n\nRésolution : une seule voie, l'automatique. Clés passées en secrets du dépôt, `index.html` et `pages.mjs` supprimés, plus aucun fichier bâti dans le dépôt. Rangement dans la foulée : `proto/` devient `app/`, `Proto.jsx` devient `App.jsx` (le composant s'appelait `App` depuis longtemps), le suivi rejoint `.claude/`, README et CLAUDE.md remis d'accord avec la réalité.\n\nTrois gardes ajoutées à `npm run verif`, sur les pannes qui ne se voient qu'après la mise en ligne : chemin absolu qui casse le sous-dossier `/popott/`, synchronisation absente du fascicule publié, manifeste ou icônes manquants. Elles tournent avant la publication : si elles échouent, le site en ligne ne change pas. `solo.mjs` gagne un mode `--portail` pour que l'écran de connexion soit smoke-testé lui aussi.\n\n`sync.bat` attend désormais la publication et annonce quand c'est en ligne, ou pourquoi ça a échoué.",
+      "type": "Autre",
+      "dom": "Global",
+      "lot": "",
+      "prio": "P0",
+      "stat": "Fait",
+      "captures": [],
+      "updated": "2026-08-10",
+      "codedWith": "Claude Code"
+    }
+  ],
   "categories": [
     "Interface",
     "Données",
@@ -20,5 +49,5 @@
     "categories": "Interface",
     "types": "Feature"
   },
-  "savedAt": "2026-08-10T14:31:32.422Z"
+  "savedAt": "2026-08-10T15:27:18.289Z"
 }
