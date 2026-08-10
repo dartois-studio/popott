@@ -19,10 +19,30 @@ et en déduire automatiquement la liste de courses.
 
 ## Voir le prototype
 
-**https://dartois-studio.github.io/popott/** — publié automatiquement à chaque push.
-C'est l'adresse à ouvrir sur le téléphone.
+**https://dartois-studio.github.io/popott/** — c'est l'adresse à ouvrir sur le téléphone.
+
+Le site est le fichier `index.html` à la racine : l'application entière dans un seul
+fichier, React compris. Il est **fabriqué**, pas écrit à la main. Après toute modification
+du proto :
+
+```bash
+cd proto
+npm run pages     # regenere index.html a la racine
+```
+
+puis commiter et pousser. Réglage GitHub, une fois : *Settings → Pages → Source →
+Deploy from a branch → main → / (root)*.
+
+Un workflow GitHub Actions existe aussi (`.github/workflows/pages.yml`), qui fait la même
+chose automatiquement à chaque push. Il demande de basculer la source sur « GitHub Actions ».
+Les deux voies marchent, mais **pas en même temps** : c'est l'une ou l'autre.
 
 ## Lancer le prototype en local
+
+Sous Windows : **double-cliquer `dev.bat`**. Il installe ce qu'il faut la première fois,
+démarre le proto et affiche deux adresses — une pour l'ordinateur, une pour le téléphone.
+
+En ligne de commande :
 
 ```bash
 cd proto
