@@ -1,5 +1,5 @@
 {
-  "nextId": 4,
+  "nextId": 9,
   "entries": [
     {
       "n": 1,
@@ -42,6 +42,71 @@
       "captures": [],
       "updated": "2026-08-10T16:13:01.961Z",
       "codedWith": "Claude Code"
+    },
+    {
+      "n": 4,
+      "created": "2026-08-10T16:16:50.727Z",
+      "title": "PWA : le service worker manquant, pour ouvrir l'application en magasin",
+      "desc": "Dernier point « à faire » de la roadmap (phase 5), et le seul qui gêne l'usage réel.\n\nLe manifeste, les icônes et le HTTPS sont en place : l'application s'installe sur l'écran d'accueil. Mais sans service worker, **elle ne se lance pas hors ligne**. La nuance compte : la synchronisation garde déjà les écritures faites sans réseau — cocher des articles au rayon surgelés ne perd rien — mais si la page n'est pas déjà ouverte, elle ne s'ouvre pas du tout.\n\nÀ faire : mettre en cache la coquille de l'application et la liste de courses. C'est la liste qui compte : c'est le seul écran dont on a besoin quand le réseau tombe.\n\nAttention au piège des chemins : le site vit dans le sous-dossier `/popott/`, et un service worker enregistré sur un chemin absolu ne couvrirait rien. `verifier-publication.mjs` monte la garde sur les chemins du HTML, pas encore sur ceux du service worker.",
+      "type": "Feature",
+      "dom": "Global",
+      "lot": "",
+      "prio": "P1",
+      "stat": "À faire",
+      "captures": [],
+      "updated": "2026-08-10T16:16:50.727Z"
+    },
+    {
+      "n": 5,
+      "created": "2026-08-10T16:16:50.727Z",
+      "title": "Sortir `etats` dans sa propre clé : ne plus renvoyer tout le document à chaque frappe",
+      "desc": "Tout l'état tient dans une seule clé `menus:v1` : plats, menus, réglages et cases cochées ensemble. Chaque frappe renvoie le document entier au serveur.\n\nLa fusion à trois voies rend ça **sûr** — personne n'écrase personne — mais pas **léger**. En magasin, cocher un article pousse quelques centaines de kilo-octets sur une connexion incertaine.\n\nPremier gain, et le plus simple : sortir `etats` (les cases cochées) dans sa propre clé. C'est ce qui bouge le plus souvent et pèse le moins. Le stockage le supporte déjà — `get / set / delete / list` par clé — c'est `App.jsx` qui n'en écrit qu'une.\n\nPrévoir la reprise des documents existants, comme `migrer()` le fait déjà pour les créneaux.",
+      "type": "Autre",
+      "dom": "Performance",
+      "lot": "",
+      "prio": "P2",
+      "stat": "À faire",
+      "captures": [],
+      "updated": "2026-08-10T16:16:50.727Z"
+    },
+    {
+      "n": 6,
+      "created": "2026-08-10T16:16:50.727Z",
+      "title": "Quatre panneaux hors de portée du balayage automatique",
+      "desc": "Dette de vérification laissée par POP-003.\n\n`scripts/empreinte.mjs` ouvre les panneaux qu'un clic atteint depuis un écran au repos : 11 sur 14. Échappent au balayage **la copie de semaine, les semaines types, le remplissage automatique et la fiche ingrédient** — ils demandent une navigation préalable.\n\nLeur code est identique octet pour octet à l'avant-découpage, donc le risque est faible. Mais « faible » n'est pas « vérifié ».\n\nDeux façons de fermer le sujet : les ouvrir une fois à la main, ou apprendre à `empreinte.mjs` à les atteindre — ce qui protégerait aussi les remaniements suivants.",
+      "type": "Autre",
+      "dom": "Interface",
+      "lot": "",
+      "prio": "P2",
+      "stat": "À faire",
+      "captures": [],
+      "updated": "2026-08-10T16:16:50.727Z"
+    },
+    {
+      "n": 7,
+      "created": "2026-08-10T16:16:50.727Z",
+      "title": "Sept valeurs hexadécimales encore en dur, hors jetons",
+      "desc": "La règle du projet est qu'aucune couleur ne s'écrit en dur dans un composant : tout vient de `brand.css`. La fiche design system affirmait que c'était acquis. Ça ne l'est pas, et ça ne l'était pas avant le découpage.\n\nDans `ui/styles.js` : le rouge d'action destructrice (`#8E2F2F`, `#E4CACA`) et les deux fonds d'étiquette `.tag.warn` / `.tag.ok` (`#FBF0DE`, `#8A5A10`, `#E6F0DE`).\n\nEn dur dans des composants : le même `#8E2F2F` dans `feuilles/Plat.jsx` et `feuilles/Repas.jsx`.\n\nLe `#000` du masque du ticket n'est pas concerné : c'est une opacité de masque, pas une couleur. Les couleurs de rayon et de catégorie non plus : ce sont des données, modifiables par l'utilisateur.\n\nÀ faire : nommer un jeton pour le rouge d'alerte et deux pour les étiquettes, dans `brand.css`.",
+      "type": "UI & UX",
+      "dom": "Interface",
+      "lot": "",
+      "prio": "P3",
+      "stat": "À faire",
+      "captures": [],
+      "updated": "2026-08-10T16:16:50.727Z"
+    },
+    {
+      "n": 8,
+      "created": "2026-08-10T16:16:50.727Z",
+      "title": "Le panneau compte vit à l'adresse `#compte`, hors de l'interface",
+      "desc": "Point ouvert relevé dans `doc/04-roadmap.md`.\n\nLe compte et le code du foyer s'atteignent par l'adresse `#compte`, en plein écran — pas par un chemin visible dans l'application. Une entrée dans les réglages serait plus juste.\n\nCe n'est pas gratuit : le bloc est long (adresse, code du foyer, bouton copier) et le glisser dans les réglages déplace des arbitrages de mise en page déjà tranchés. À regarder avec `doc/02-ecrans.md` sous les yeux.",
+      "type": "UI & UX",
+      "dom": "Réglages",
+      "lot": "",
+      "prio": "P3",
+      "stat": "À faire",
+      "captures": [],
+      "updated": "2026-08-10T16:16:50.727Z"
     }
   ],
   "categories": [
@@ -63,5 +128,5 @@
     "categories": "Interface",
     "types": "Feature"
   },
-  "savedAt": "2026-08-10T16:13:01.961Z"
+  "savedAt": "2026-08-10T16:16:50.727Z"
 }
