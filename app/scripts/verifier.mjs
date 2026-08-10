@@ -9,12 +9,15 @@
 
    Deux fichiers a controler, et ils ne doivent pas montrer la meme chose :
 
-     dist-solo/popott.html   toujours l'application, sans compte ni reseau
-     ../index.html           l'application si la synchronisation est absente,
-                             l'ecran de connexion si elle est configuree
+     dist-solo/popott.html    toujours l'application, sans compte ni reseau
+     dist-verif/popott.html   l'ecran de connexion, synchronisation branchee
+
+   Les deux sont des fichiers uniques produits par `solo.mjs` : jsdom ne sait
+   pas executer les modules ES du vrai `dist/`, que controle a sa maniere
+   `verifier-publication.mjs`.
 
    Usage : node scripts/verifier.mjs [chemin] [--portail]
-           npm run verif   (build solo + build pages + les deux controles)
+           npm run verif   (tout : fusion, les deux rendus, la publication)
    ========================================================================== */
 
 import { JSDOM } from "jsdom";

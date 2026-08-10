@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0proto"
+cd /d "%~dp0app"
 
 echo ============================================
-echo   POPOTT — lancement du prototype en local
+echo   POPOTT - lancement de l'application en local
 echo ============================================
 echo.
 
@@ -27,7 +27,7 @@ if not exist node_modules (
   echo.
 )
 
-echo Le proto demarre. Deux adresses vont s'afficher juste en dessous :
+echo L'application demarre. Deux adresses vont s'afficher juste en dessous :
 echo.
 echo   Local    ^> a ouvrir dans le navigateur de cet ordinateur
 echo   Network  ^> a taper sur le telephone, connecte au meme wifi

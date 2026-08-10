@@ -86,7 +86,7 @@ portée), catégories, régimes, unités. Rien n'est codé en dur ailleurs dans 
 
 - **Application** *(en tête de page)* : le numéro de version, la date de publication et le
   commit, plus **Actualiser l'application** — qui vide les caches et redemande le code au
-  serveur. Aucune donnée n'est touchée. Voir `proto/src/version.js` pour le pourquoi du
+  serveur. Aucune donnée n'est touchée. Voir `app/src/version.js` pour le pourquoi du
   paramètre d'adresse.
 - **Foyer** : un **nom de foyer** renommable en tête de la carte, puis les personnes.
   Le nom vit dans le document `menus:v1`, comme les personnes et les rayons — il se

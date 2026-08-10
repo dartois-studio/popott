@@ -1,17 +1,16 @@
 {
-  "name": "popott-proto",
+  "name": "popott",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Prototype UX/UI de Popott — bibliotheque de plats, menu de la semaine, liste de courses",
+  "description": "Popott — bibliotheque de plats, menu de la semaine, liste de courses",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "icons": "node scripts/icons.mjs",
     "solo": "node scripts/solo.mjs",
-    "pages": "node scripts/pages.mjs",
-    "verif": "node scripts/verifier-fusion.mjs && npm run solo && node scripts/verifier.mjs && npm run pages && node scripts/verifier.mjs ../../index.html --portail"
+    "verif": "node scripts/verifier-fusion.mjs && npm run solo && node scripts/verifier.mjs && node scripts/solo.mjs --portail && node scripts/verifier.mjs ../dist-verif/popott.html --portail && vite build && node scripts/verifier-publication.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",

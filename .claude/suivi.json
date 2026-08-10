@@ -1,0 +1,24 @@
+{
+  "nextId": 1,
+  "entries": [],
+  "categories": [
+    "Interface",
+    "Données",
+    "Réglages",
+    "Performance",
+    "Global"
+  ],
+  "types": [
+    "Feature",
+    "Bug",
+    "UI & UX",
+    "Idée",
+    "Autre"
+  ],
+  "lots": [],
+  "defaults": {
+    "categories": "Interface",
+    "types": "Feature"
+  },
+  "savedAt": "2026-08-10T14:31:32.422Z"
+}

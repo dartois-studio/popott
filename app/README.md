@@ -1,6 +1,6 @@
-# Prototype
+# L'application
 
-Application Vite + React, sans backend. Le prototype UX/UI de Popott, en état de marche.
+Popott : Vite + React, avec comptes et foyer partagé sur Supabase.
 
 ```bash
 npm install
@@ -12,32 +12,34 @@ l'application : il pointe vers `src/main.jsx`, du JSX qu'aucun navigateur ne sai
 chargé comme module ES — ce que le protocole `file://` refuse de toute façon. C'est Vite
 qui compile et sert tout ça, d'où `npm run dev`.
 
-Si Node n'est pas installé, ou pour montrer le proto à quelqu'un :
+Si Node n'est pas installé, ou pour montrer l'application à quelqu'un :
 
 ```bash
 npm run solo    # → dist-solo/popott.html
-npm run verif   # construit, puis vérifie que l'application démarre vraiment
+npm run verif   # construit et contrôle tout, comme le fera GitHub
 ```
 
 Un fichier HTML unique et autonome, React compris, qui s'ouvre d'un double-clic.
-Réserve : selon le navigateur, le stockage local peut être bloqué sur `file://` — le proto
-retombe alors en mémoire seule et oublie tout au rechargement. Pour travailler, `npm run dev`.
+Réserve : selon le navigateur, le stockage local peut être bloqué sur `file://` —
+l'application retombe alors en mémoire seule et oublie tout au rechargement. Pour
+travailler, `npm run dev`.
 
 `--host` est déjà actif : l'adresse réseau affichée par Vite s'ouvre depuis le téléphone
 sur le même Wi-Fi. C'est la seule façon honnête de juger l'écran Courses.
 
 ## Le voir en ligne
 
-Chaque `git push` sur `main` publie le proto sur
+Chaque `git push` sur `main` reconstruit et publie l'application sur
 **https://dartois.studio/popott/** — c'est l'adresse à ouvrir sur le téléphone,
-et celle depuis laquelle l'installer sur l'écran d'accueil.
+et celle depuis laquelle l'installer sur l'écran d'accueil. Rien à construire à la
+main : aucun fichier bâti ne vit dans le dépôt.
 
-Le workflow est dans `.github/workflows/pages.yml`. À faire **une seule fois** dans GitHub :
-*Settings → Pages → Source → GitHub Actions*.
+Le workflow est dans `.github/workflows/pages.yml`. Il rejoue `npm run verif` avant
+de publier ; si le contrôle échoue, le site en ligne ne bouge pas.
 
 Le build utilise `base: "./"` : chemins relatifs partout, donc le site fonctionne aussi bien
 à la racine d'un domaine que dans le sous-dossier `/popott/`. Ne pas repasser en chemins
-absolus.
+absolus — `verifier-publication.mjs` le refuse, parce que ça ne se voit qu'après le push.
 
 ## Ce qu'il fait
 
@@ -48,20 +50,26 @@ garde-manger, les ajustements par personne, les semaines types et le remplissage
 automatique. Détail dans `doc/02-ecrans.md`.
 
 **Les données sont sauvegardées sur l'appareil** et survivent au rechargement.
-Elles ne sont pas encore partagées entre deux téléphones — c'est la phase 4.
+Avec un compte et un foyer, elles sont partagées entre appareils en temps réel —
+voir `doc/07-synchronisation.md`.
 
 ## Fichiers
 
 | Fichier | Rôle |
 |---|---|
-| `src/Proto.jsx` | Le prototype. 2 270 lignes, un seul fichier, volontairement. |
+| `src/App.jsx` | Les quatre écrans. 2 430 lignes, un seul fichier — à découper. |
 | `src/brand.css` | Les jetons de design. Source de vérité, aucun hex ailleurs. |
 | `src/Logo.jsx` | `<Logo />` et `<Mark />`, SVG inline en `currentColor` |
 | `src/storage.js` | Adaptateur de stockage — voir ci-dessous |
+| `src/storage-distant.js` | Le même contrat, branché sur Supabase |
+| `src/portail.jsx`, `src/auth.jsx` | Compte, foyer, écran de connexion |
+| `src/fusion.js` | Fusion à trois voies : deux appareils, aucune perte |
 | `public/` | Manifeste PWA et icônes générées |
 | `scripts/icons.mjs` | `npm run icons` — régénère les icônes depuis `/icons` |
-| `scripts/solo.mjs` | `npm run solo` — fabrique le HTML autonome |
-| `scripts/verifier.mjs` | `npm run verif` — vérifie que l'app se monte, pas seulement qu'elle compile |
+| `scripts/solo.mjs` | Fabrique un HTML autonome. `--portail` : variante de contrôle. |
+| `scripts/verifier.mjs` | Vérifie que l'écran se monte, pas seulement qu'il compile |
+| `scripts/verifier-publication.mjs` | Contrôle `dist/` tel qu'il sera servi |
+| `scripts/verifier-fusion.mjs` | Les cas limites de la fusion |
 
 ## Le point sensible : `storage.js`
 
@@ -69,8 +77,8 @@ Le prototype a été écrit dans les artefacts Claude, qui exposent une API `win
 Hors de cet environnement elle n'existe pas, et le proto tombait en mémoire seule.
 
 `src/storage.js` la réimplémente sur `localStorage`, avec la même signature et les mêmes
-clés. Conséquence : **`Proto.jsx` n'a aucune ligne à changer** et fonctionne des deux côtés.
-Ne pas « nettoyer » les appels `window.storage` dans `Proto.jsx`.
+clés. Conséquence : **`App.jsx` n'a aucune ligne à changer** et fonctionne des deux côtés.
+Ne pas « nettoyer » les appels `window.storage` dans `App.jsx`.
 
 C'est aussi le point d'accroche de la synchronisation : même interface
 `get / set / delete / list`, backend distant. Un seul fichier à remplacer.

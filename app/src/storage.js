@@ -7,7 +7,7 @@
    tout au rechargement.
 
    On la reimplemente ici sur localStorage, avec la meme signature et les memes
-   cles. Proto.jsx n'a donc aucune ligne a changer, et il persiste vraiment.
+   cles. App.jsx n'a donc aucune ligne a changer, et il persiste vraiment.
 
    Le jour ou la synchronisation arrive, c'est ce fichier qu'on remplace :
    meme interface, backend distant. Rien d'autre ne bouge.

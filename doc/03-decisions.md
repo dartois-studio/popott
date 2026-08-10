@@ -84,7 +84,7 @@ qui a l'air bizarre : plusieurs solutions évidentes ont été essayées puis ab
   *Compte* en bas de liste, avec l'e-mail, le code du foyer et la déconnexion. Le
   panneau `#compte` n'a pas été retiré : il sert d'écran plein quand il n'y a rien
   d'autre à montrer.
-- **`Proto.jsx` ne parle toujours pas à Supabase** : il reçoit `compte`, `version` et
+- **`App.jsx` ne parle toujours pas à Supabase** : il reçoit `compte`, `version` et
   `surActualiser` du point d'entrée, et affiche les blocs correspondants s'ils existent.
   Les trois sont facultatifs — sans eux, le proto tourne tel quel.
 - **Nom du foyer dans le document, pas dans la colonne `foyers.nom`** : rangé à côté des

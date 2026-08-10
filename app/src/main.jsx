@@ -4,7 +4,7 @@ import "./brand.css";
 import { installerStockage } from "./storage.js";
 import { synchroDisponible } from "./config.js";
 import { VERSION, actualiser, nettoyerAdresse } from "./version.js";
-import Proto from "./Proto.jsx";
+import App from "./App.jsx";
 
 /* ==========================================================================
    Popott — point d'entree
@@ -16,7 +16,7 @@ import Proto from "./Proto.jsx";
    l'appareil, aucun compte, aucune requete reseau.
 
    Avec Supabase : un portail demande qui on est et quel foyer, branche le
-   stockage partage, puis rend `Proto` — qui n'a jamais su qu'il y avait un
+   stockage partage, puis rend `App` — qui n'a jamais su qu'il y avait un
    serveur derriere `window.storage`.
 
    Le chargement des modules de synchronisation est differe : sans
@@ -25,7 +25,7 @@ import Proto from "./Proto.jsx";
 
 function Local() {
   installerStockage();
-  return <Proto version={VERSION} surActualiser={actualiser} />;
+  return <App version={VERSION} surActualiser={actualiser} />;
 }
 
 /* Le portail n'est charge que si la synchronisation existe : `import()` sort

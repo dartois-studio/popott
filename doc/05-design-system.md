@@ -1,6 +1,6 @@
 # Design system
 
-Source de vérité technique : [`proto/src/brand.css`](../proto/src/brand.css).
+Source de vérité technique : [`app/src/brand.css`](../app/src/brand.css).
 Ce document explique **pourquoi**, le fichier CSS dit **combien**.
 
 Règle unique : aucune valeur hexadécimale, aucun espacement en dur dans un composant.
@@ -45,7 +45,7 @@ dégradés). Le disque suffit.
 
 Ces deux valeurs viennent des fichiers de `icons/`. Elles ne se négocient pas.
 
-> **Le proto est déjà migré** sur ces jetons : `proto/src/Proto.jsx` ne contient plus
+> **Le proto est déjà migré** sur ces jetons : `app/src/App.jsx` ne contient plus
 > aucune valeur hexadécimale. Correspondances appliquées : `--aub` → `--aubergine`,
 > `--ink2` → `--ink-2`, `--ink3` → `--ink-3`, `--line2` → `--line-soft`,
 > `--card` → `--surface`, `--serif` → `--display`.

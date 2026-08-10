@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Logo } from "./Logo";
 
 /* ==========================================================================
-   POPOTT — Prototype UX/UI
+   POPOTT — l'application
    Bibliothèque de plats → Menu de la semaine → Liste de courses agrégée
    ========================================================================== */
 

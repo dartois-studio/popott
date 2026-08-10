@@ -44,14 +44,14 @@ messages par heure ; en cas de blocage, décocher débloque immédiatement.
 ### 4. Brancher l'application
 
 *Project Settings* → *API*. Copier l'URL du projet et la clé **anon public**
-dans un fichier `proto/.env` :
+dans un fichier `app/.env` :
 
 ```
 VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOi…
 ```
 
-`proto/.env.example` sert de modèle. Le fichier `.env` n'est pas versionné.
+`app/.env.example` sert de modèle. Le fichier `.env` n'est pas versionné.
 
 > Ces deux valeurs sont **publiques par construction** : elles finissent dans le
 > fichier publié, et c'est prévu. Ce qui protège les données, c'est le *row level
@@ -59,17 +59,33 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOi…
 > compte ne voit que son foyer. La clé **service_role**, elle, ne doit jamais
 > sortir de Supabase.
 
-### 5. Publier
+### 5. Donner les mêmes valeurs à GitHub
+
+Le `.env` sert au développement local ; il n'est pas versionné, donc GitHub ne le
+voit pas. Sans ces valeurs de son côté, le site publié se construirait très bien
+mais **sans compte ni foyer partagé**.
+
+*Settings → Secrets and variables → Actions*, deux secrets :
+
+| Secret | Valeur |
+|---|---|
+| `SUPABASE_URL` | la même que `VITE_SUPABASE_URL` |
+| `SUPABASE_ANON_KEY` | la même que `VITE_SUPABASE_ANON_KEY` |
+
+En ligne de commande, depuis le dépôt :
 
 ```bash
-cd proto
-npm run pages     # regénère index.html à la racine, avec la synchro dedans
+gh secret set SUPABASE_URL
+gh secret set SUPABASE_ANON_KEY
 ```
 
-Le script annonce en clair s'il a trouvé la configuration ou non. Puis commiter
-et pousser (`sync.bat` fait les deux).
+### 6. Publier
 
-### 6. Le premier appareil
+Rien à construire : `sync.bat` — ou `git push` — suffit. GitHub reconstruit et met
+en ligne. La vérification refuse de publier si la synchronisation n'est pas gravée
+dans le fichier servi, plutôt que de laisser la surprise pour le magasin.
+
+### 7. Le premier appareil
 
 Ouvrir le site, créer un compte, puis **Créer un foyer**. Les données déjà
 présentes sur cet appareil deviennent celles du foyer — rien n'est perdu.
@@ -77,14 +93,14 @@ présentes sur cet appareil deviennent celles du foyer — rien n'est perdu.
 Aller ensuite dans **Réglages → Compte** pour lire le **code du foyer** et le
 copier. (L'adresse `#compte` mène au même endroit, en plein écran.)
 
-### 7. Les autres appareils
+### 8. Les autres appareils
 
 Sur chaque téléphone et chaque navigateur : ouvrir le site, créer un compte
 (ou se connecter avec le même), coller le code dans **Rallier un foyer
 existant**.
 
 ⚠ Sur un appareil qui a déjà servi, ses données locales ne remontent pas :
-c'est le foyer qui gagne, et le local est remplacé. Faire le pas 6 depuis
+c'est le foyer qui gagne, et le local est remplacé. Faire le pas 7 depuis
 l'appareil qui a les vraies données.
 
 ---
@@ -93,7 +109,7 @@ l'appareil qui a les vraies données.
 
 ### Le point d'accroche n'a pas bougé
 
-`window.storage` expose toujours `get / set / delete / list`. `Proto.jsx`
+`window.storage` expose toujours `get / set / delete / list`. `App.jsx`
 ignore qu'il y a un serveur derrière. Deux implémentations coexistent :
 
 | Fichier | Quand |
@@ -158,7 +174,7 @@ centaines de kilo-octets et saturerait la liaison. Le client reçoit le
 signal, va chercher la valeur par l'API normale, fusionne si besoin, puis
 émet un évènement `popott:distant`.
 
-`Proto.jsx` l'écoute et remplace ses données. La semaine consultée, l'onglet
+`App.jsx` l'écoute et remplace ses données. La semaine consultée, l'onglet
 ouvert et la recherche en cours ne bougent pas : seul `db` est remplacé.
 
 Le tri se fait sur la **version**, pas sur l'identité de l'auteur : deux
@@ -172,7 +188,7 @@ et il se rallie par son code — l'identifiant du foyer, affiché dans
 **Réglages → Compte** (et toujours dans le panneau `#compte`, qui reste la
 version plein écran du même contenu).
 
-`Proto.jsx` ne connaît ni Supabase ni la notion de session. Il reçoit du
+`App.jsx` ne connaît ni Supabase ni la notion de session. Il reçoit du
 portail trois entrées facultatives — `compte`, `version`, `surActualiser` —
 et affiche les blocs correspondants s'ils existent. Sans elles, en local
 seul ou dans l'environnement d'origine du proto, l'écran est exactement
@@ -202,7 +218,7 @@ dans un foyer au hasard.
 - **Un seul document pour tout l'état.** Chaque frappe renvoie le document
   entier. La fusion rend ça sûr, mais pas léger. Si ça devient gênant, sortir
   `etats` (les cases cochées) dans sa propre clé est le premier découpage
-  utile — et le stockage le supporte déjà, c'est `Proto.jsx` qui n'écrit
+  utile — et le stockage le supporte déjà, c'est `App.jsx` qui n'écrit
   qu'une clé.
 
 - **Pas de gestion de sortie de foyer** dans l'interface. La règle SQL existe

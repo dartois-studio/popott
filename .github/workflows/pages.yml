@@ -1,21 +1,20 @@
-# Publie le prototype sur GitHub Pages a chaque push sur main.
-# Adresse resultante : https://dartois.studio/popott/ (domaine personnalise ;
-# l'adresse dartois-studio.github.io/popott/ y redirige)
+# Construit et publie Popott sur GitHub Pages a chaque envoi sur main.
+# Adresse resultante : https://dartois.studio/popott/
+# (domaine personnalise ; dartois-studio.github.io/popott/ y redirige)
 #
-# A faire une seule fois, a la main : Settings → Pages → Source → GitHub Actions.
+# C'est la seule voie de publication. Il n'y a plus de fichier construit a la
+# main dans le depot : ce qui est en ligne est toujours ce qui vient d'etre
+# envoye, sans etape a ne pas oublier.
 #
-# ATTENTION — cette voie n'est PAS celle qui sert aujourd'hui. Le site publie
-# est le fichier `index.html` a la racine du depot, regenere a la main par
-# `npm run pages` et pousse avec le reste. Les deux voies marchent, mais pas
-# en meme temps : basculer la source vers GitHub Actions active celle-ci et
-# rend le fichier racine inutile.
+# Deux reglages, faits une fois :
+#   Settings → Pages → Source → GitHub Actions
+#   Settings → Secrets and variables → Actions → SUPABASE_URL, SUPABASE_ANON_KEY
 #
-# Pour que la synchronisation fonctionne par cette voie, deux secrets sont
-# necessaires : Settings → Secrets and variables → Actions →
-# SUPABASE_URL et SUPABASE_ANON_KEY. Sans eux le site se construit quand meme,
-# mais chaque appareil reste dans son coin.
+# Sans ces secrets, le site se construirait tres bien mais sans compte ni
+# foyer partage — chaque telephone dans son coin. `npm run verif` refuse de
+# passer dans ce cas plutot que de laisser la surprise pour apres.
 
-name: Publier le proto
+name: Publier Popott
 
 on:
   push:
@@ -36,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: proto
+        working-directory: app
     steps:
       - uses: actions/checkout@v4
 
@@ -47,16 +46,9 @@ jobs:
       - name: Installer
         run: npm install
 
-      - name: Construire
-        run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-
-      # Sans les secrets : la verification attend l'application elle-meme.
-      # Avec : elle accepte aussi l'ecran de connexion, qui est alors le
-      # premier ecran legitime.
-      - name: Verifier que l'application demarre vraiment
+      # `verif` construit et controle tout : la fusion, l'application, l'ecran
+      # de connexion, puis le dossier `dist/` tel qu'il sera servi.
+      - name: Construire et verifier
         run: npm run verif
         env:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -64,7 +56,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: proto/dist
+          path: app/dist
 
   publier:
     needs: construire

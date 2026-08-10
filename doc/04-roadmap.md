@@ -20,7 +20,7 @@ partage désormais ses données entre les appareils du foyer : c'est maintenant 
 réel qui dira ce qui manque, pas une liste de fonctionnalités. La mise en route de la
 synchronisation est décrite dans `07-synchronisation.md`.
 
-En parallèle, indépendant du reste : **découper `Proto.jsx`**. Le fichier est monolithique par
+En parallèle, indépendant du reste : **découper `App.jsx`**. Le fichier est monolithique par
 construction (un prototype se lit d'un bloc), ce qui n'est plus tenable dès qu'on est
 plusieurs à intervenir dessus. Le découpage doit être un pur déplacement de code, à rendu
 identique.
@@ -32,7 +32,7 @@ identique.
 - **Un seul document pour tout l'état** : chaque frappe renvoie le document entier au
   serveur. La fusion à trois voies rend ça sûr, pas léger. Le premier découpage utile
   serait de sortir `etats` — les cases cochées — dans sa propre clé ; le stockage le
-  supporte déjà, c'est `Proto.jsx` qui n'écrit qu'une seule clé.
+  supporte déjà, c'est `App.jsx` qui n'écrit qu'une seule clé.
 - **Le panneau compte est à l'adresse `#compte`**, hors de l'interface. Une entrée dans
   les réglages serait plus juste, mais déplacerait des arbitrages de mise en page.
 - **Portions fines par personne** — reporté, voir `03-decisions.md`.

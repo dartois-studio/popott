@@ -50,7 +50,7 @@ contour, poser le logotype aubergine sur un fond sombre (utiliser la version inv
 
 ## Fichiers générés pour la PWA
 
-Dans `proto/public/`, dérivés de `popott-icon.svg` :
+Dans `app/public/`, dérivés de `popott-icon.svg` :
 
 | Fichier | Taille | Rôle |
 |---|---|---|

@@ -1,6 +1,7 @@
 node_modules
 dist
 dist-solo
+dist-verif
 .solo-tmp
 .vite
 

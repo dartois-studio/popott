@@ -3,3 +3,7 @@ dist
 .vite
 .DS_Store
 *.log
+
+# Suivi projet
+.claude/suivi-captures/
+.claude/suivi.backup-*.json
