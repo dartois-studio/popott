@@ -7,6 +7,21 @@ npm install
 npm run dev
 ```
 
+**`index.html` ne s'ouvre pas d'un double-clic, et c'est normal.** Il ne contient pas
+l'application : il pointe vers `src/main.jsx`, du JSX qu'aucun navigateur ne sait lire,
+chargé comme module ES — ce que le protocole `file://` refuse de toute façon. C'est Vite
+qui compile et sert tout ça, d'où `npm run dev`.
+
+Si Node n'est pas installé, ou pour montrer le proto à quelqu'un :
+
+```bash
+npm run solo    # → dist-solo/popott.html
+```
+
+Un fichier HTML unique et autonome, React compris, qui s'ouvre d'un double-clic.
+Réserve : selon le navigateur, le stockage local peut être bloqué sur `file://` — le proto
+retombe alors en mémoire seule et oublie tout au rechargement. Pour travailler, `npm run dev`.
+
 `--host` est déjà actif : l'adresse réseau affichée par Vite s'ouvre depuis le téléphone
 sur le même Wi-Fi. C'est la seule façon honnête de juger l'écran Courses.
 
@@ -31,6 +46,7 @@ Elles ne sont pas encore partagées entre deux téléphones — c'est la phase 4
 | `src/storage.js` | Adaptateur de stockage — voir ci-dessous |
 | `public/` | Manifeste PWA et icônes générées |
 | `scripts/icons.mjs` | `npm run icons` — régénère les icônes depuis `/icons` |
+| `scripts/solo.mjs` | `npm run solo` — fabrique le HTML autonome |
 
 ## Le point sensible : `storage.js`
 

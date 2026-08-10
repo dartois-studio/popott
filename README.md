@@ -24,6 +24,9 @@ npm install
 npm run dev
 ```
 
+Ouvrir `proto/index.html` directement ne marche pas : il faut passer par Vite.
+Pour une version en un seul fichier, ouvrable d'un double-clic : `npm run solo`.
+
 Le prototype est autonome : aucun backend, aucune dépendance en dehors de React.
 Les données sont sauvegardées sur l'appareil et survivent au rechargement.
 
