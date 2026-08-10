@@ -3209,7 +3209,14 @@ function updateStorageUI(){
   const dot=$("#storageDot"), lbl=$("#storageLabel"), btn=$("#connectBtn"), reload=$("#reloadBtn");
   btn.classList.remove("hidden"); reload.classList.remove("hidden");
   if(!fsaSupported()){ dot.className="dot warn"; lbl.textContent="Local (navigateur sans écriture)"; btn.classList.add("hidden"); reload.classList.add("hidden"); }
-  else if(dirHandle && dirReady){ dot.className="dot ok"; lbl.textContent="Connecté à .claude"; btn.textContent="Reconnecter"; }
+  // Le nom reel du dossier, pas un libelle en dur : un dossier voisin choisi par
+  // erreur ecrivait un suivi.json a cote sous une pastille verte rassurante.
+  else if(dirHandle && dirReady){
+    const bon = dirHandle.name === ".claude";
+    dot.className = bon ? "dot ok" : "dot warn";
+    lbl.textContent = bon ? "Connecté à .claude" : "Connecté à « " + dirHandle.name + " » — ce n’est pas .claude";
+    btn.textContent="Reconnecter";
+  }
   else if(dirHandle && !dirReady){ dot.className="dot warn"; lbl.textContent="Déconnecté — clique pour reconnecter"; btn.textContent="Reconnecter .claude"; }
   else { dot.className="dot"; lbl.textContent="Stockage local"; btn.textContent="Connecter .claude"; }
 }
