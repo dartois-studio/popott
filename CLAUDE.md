@@ -10,13 +10,22 @@ menu de la semaine, et en déduit la liste de courses agrégée et cochable en m
 | Chemin | Quoi |
 |---|---|
 | `app/` | L'application. Tout le code vit là. |
-| `app/src/App.jsx` | Les quatre écrans, et tout le CSS. 2 430 lignes. |
+| `app/src/App.jsx` | L'assemblage seul : état du document, contexte, onglets, panneau ouvert |
+| `app/src/ecrans/` | Les quatre écrans — `Plats`, `Semaine`, `Courses`, `Reglages` |
+| `app/src/feuilles/` | Les panneaux coulissants, un fichier par famille |
+| `app/src/ui/` | `styles.js` (la feuille de style), `icones.jsx`, `briques.jsx` |
+| `app/src/outils.js` | Dates, unités, couleurs de catégorie — sans React, donc sans cycle |
 | `doc/` | Le cahier des charges, en fiches courtes |
 | `.claude/` | Le suivi projet |
 | `icons/`, `supabase/` | Sources de marque, schéma SQL |
 
 Le dossier s'est appelé `proto/` et le fichier `Proto.jsx` : c'est fini, l'application
 est en production. Aucun fichier construit ne vit dans le dépôt — voir **Publication**.
+
+**Avant/après un remaniement de rendu :** `node scripts/empreinte.mjs <popott.html> <a.json>`
+sur la version d'avant, puis sur celle d'après, puis `--comparer`. Il monte l'application,
+parcourt les quatre écrans et ouvre les panneaux, et compare le DOM caractère par caractère.
+C'est ce qui permet d'affirmer « sans changer un pixel » autrement que de mémoire.
 
 ## Ordre de lecture
 
@@ -91,15 +100,16 @@ local, et les secrets `SUPABASE_URL` / `SUPABASE_ANON_KEY` du dépôt pour la pu
 
 Dans l'ordre où ils ont du sens :
 
-1. **Découpage de `App.jsx`** — 2 430 lignes. Le découper en modules
-   (`state/`, `screens/`, `sheets/`, `ui/`) **sans changer un pixel du rendu**.
-2. **PWA** — manifeste et icônes sont en place, le site est publié en HTTPS sur
+1. **PWA** — manifeste et icônes sont en place, le site est publié en HTTPS sur
    GitHub Pages, il manque le service worker et la mise en cache de la liste de courses.
    C'est ce qui bloque le lancement hors ligne en magasin : la synchronisation garde
    déjà les écritures faites sans réseau, mais la page elle-même ne se charge pas.
-3. **Découper le document** — tout l'état tient dans une seule clé `menus:v1`, renvoyée
+2. **Découper le document** — tout l'état tient dans une seule clé `menus:v1`, renvoyée
    en entier à chaque frappe. La fusion à trois voies rend ça sûr, pas léger. Sortir
    `etats` dans sa propre clé serait le premier gain.
+
+Le découpage de `App.jsx` est fait : 2 430 lignes réparties en seize modules, rendu
+prouvé identique. Le plus gros fichier restant est `feuilles/Repas.jsx`, 317 lignes.
 
 ## Ce qui est volontairement reporté
 

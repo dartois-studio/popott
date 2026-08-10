@@ -57,7 +57,12 @@ voir `doc/07-synchronisation.md`.
 
 | Fichier | Rôle |
 |---|---|
-| `src/App.jsx` | Les quatre écrans. 2 430 lignes, un seul fichier — à découper. |
+| `src/App.jsx` | L'assemblage : état du document, contexte, onglets, panneau ouvert |
+| `src/ecrans/` | Les quatre écrans |
+| `src/feuilles/` | Les panneaux coulissants |
+| `src/ui/` | `styles.js`, `icones.jsx`, `briques.jsx` |
+| `src/outils.js` | Dates, unités, couleurs de catégorie. Sans React. |
+| `src/exemple.js` | Le jeu de données d'ouverture, et la reprise des anciens documents |
 | `src/brand.css` | Les jetons de design. Source de vérité, aucun hex ailleurs. |
 | `src/Logo.jsx` | `<Logo />` et `<Mark />`, SVG inline en `currentColor` |
 | `src/storage.js` | Adaptateur de stockage — voir ci-dessous |
@@ -70,6 +75,25 @@ voir `doc/07-synchronisation.md`.
 | `scripts/verifier.mjs` | Vérifie que l'écran se monte, pas seulement qu'il compile |
 | `scripts/verifier-publication.mjs` | Contrôle `dist/` tel qu'il sera servi |
 | `scripts/verifier-fusion.mjs` | Les cas limites de la fusion |
+| `scripts/empreinte.mjs` | Empreinte du DOM avant/après un remaniement — voir ci-dessous |
+
+## Remanier sans changer le rendu
+
+`empreinte.mjs` monte l'application dans un DOM simulé, parcourt les quatre écrans,
+ouvre les panneaux atteignables, et écrit le DOM de chaque état. Deux empreintes prises
+de part et d'autre d'un remaniement se comparent caractère par caractère :
+
+```bash
+npm run solo && cp dist-solo/popott.html /tmp/avant.html
+node scripts/empreinte.mjs /tmp/avant.html /tmp/a.json
+# … remaniement …
+npm run solo && node scripts/empreinte.mjs dist-solo/popott.html /tmp/b.json
+node scripts/empreinte.mjs /tmp/a.json /tmp/b.json --comparer
+```
+
+Les uid tirés au hasard et l'horodatage de build sont neutralisés, sinon la comparaison
+crierait à chaque fois. Écrit pour le découpage de `App.jsx`, où il a rattrapé un import
+manquant qui compilait sans broncher et cassait à l'exécution.
 
 ## Le point sensible : `storage.js`
 

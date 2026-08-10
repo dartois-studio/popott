@@ -20,10 +20,10 @@ partage désormais ses données entre les appareils du foyer : c'est maintenant 
 réel qui dira ce qui manque, pas une liste de fonctionnalités. La mise en route de la
 synchronisation est décrite dans `07-synchronisation.md`.
 
-En parallèle, indépendant du reste : **découper `App.jsx`**. Le fichier est monolithique par
-construction (un prototype se lit d'un bloc), ce qui n'est plus tenable dès qu'on est
-plusieurs à intervenir dessus. Le découpage doit être un pur déplacement de code, à rendu
-identique.
+Le découpage de `App.jsx` est fait : les 2 430 lignes du prototype — monolithique par
+construction, un proto se lit d'un bloc — sont réparties en seize modules (`ecrans/`,
+`feuilles/`, `ui/`, `outils.js`). Pur déplacement de code : le DOM des quatre écrans et
+des panneaux a été comparé caractère par caractère avant et après, à l'identique.
 
 ## Points encore ouverts
 

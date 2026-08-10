@@ -45,10 +45,19 @@ dégradés). Le disque suffit.
 
 Ces deux valeurs viennent des fichiers de `icons/`. Elles ne se négocient pas.
 
-> **Le proto est déjà migré** sur ces jetons : `app/src/App.jsx` ne contient plus
-> aucune valeur hexadécimale. Correspondances appliquées : `--aub` → `--aubergine`,
-> `--ink2` → `--ink-2`, `--ink3` → `--ink-3`, `--line2` → `--line-soft`,
-> `--card` → `--surface`, `--serif` → `--display`.
+> **La feuille de style est migrée** sur ces jetons : `app/src/ui/styles.js`.
+> Correspondances appliquées : `--aub` → `--aubergine`, `--ink2` → `--ink-2`,
+> `--ink3` → `--ink-3`, `--line2` → `--line-soft`, `--card` → `--surface`,
+> `--serif` → `--display`.
+>
+> Restent hors jetons, à traiter un jour : le rouge d'action destructrice
+> (`#8E2F2F` / `#E4CACA`, aussi présent en dur dans `feuilles/Plat.jsx` et
+> `feuilles/Repas.jsx`) et les deux fonds d'étiquette `.tag.warn` / `.tag.ok`.
+> Le `#000` du masque du ticket, lui, n'est pas une couleur : c'est l'opacité
+> d'un masque, il n'a rien à faire dans la palette.
+>
+> Les couleurs de rayon et de catégorie (`exemple.js`, `CAT_COULEURS`) ne sont pas
+> concernées : ce sont des **données**, modifiables par l'utilisateur, pas du style.
 
 > **Changement par rapport au proto.** Le proto utilisait un aubergine plus clair
 > (`#5C2A46`) et un fond gris-vert (`#E9ECE4`), choisis avant l'existence du logo.
