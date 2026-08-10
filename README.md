@@ -20,7 +20,9 @@ et en déduire automatiquement la liste de courses.
 
 ## Voir le prototype
 
-**https://dartois-studio.github.io/popott/** — c'est l'adresse à ouvrir sur le téléphone.
+**https://dartois.studio/popott/** — c'est l'adresse à ouvrir sur le téléphone.
+L'adresse GitHub `dartois-studio.github.io/popott/` y redirige : c'est le domaine
+personnalisé qui fait foi, et c'est lui qu'attendent les réglages Supabase.
 
 Le site est le fichier `index.html` à la racine : l'application entière dans un seul
 fichier, React compris. Il est **fabriqué**, pas écrit à la main. Après toute modification

@@ -75,3 +75,16 @@ Traitée comme un **ticket de caisse** : c'est le seul écran qui prend un parti
 
 Tout ce qui doit rester modifiable : personnes, ingrédients, rayons, créneaux (avec leur
 portée), catégories, régimes, unités. Rien n'est codé en dur ailleurs dans l'application.
+
+- **Foyer** : un **nom de foyer** renommable en tête de la carte, puis les personnes.
+  Le nom vit dans le document `menus:v1`, comme les personnes et les rayons — il se
+  synchronise donc tout seul et existe aussi en local seul.
+- **Compte** *(seulement si la synchronisation est configurée)* : l'adresse e-mail du
+  compte connecté sur cet appareil et depuis quand, le code du foyer avec un bouton
+  **Copier**, et **Se déconnecter**. C'est l'entrée que `doc/07-synchronisation.md`
+  attendait pour le panneau `#compte`, qui reste accessible mais n'est plus le seul
+  chemin.
+- **Application** : le numéro de version, la date de publication et le commit, plus
+  **Actualiser l'application** — qui vide les caches et redemande le code au serveur.
+  Aucune donnée n'est touchée. Voir `proto/src/version.js` pour le pourquoi du
+  paramètre d'adresse.

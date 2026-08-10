@@ -24,13 +24,22 @@ Le script est rejouable : le relancer ne casse rien. Il crée trois tables
 (`foyers`, `membres`, `documents`), les règles de sécurité, trois fonctions,
 et ouvre le canal temps réel.
 
-### 3. Simplifier l'inscription
+### 3. Régler les adresses de retour
 
-*Authentication* → *Sign In / Providers* → *Email* → décocher **Confirm email**.
+*Authentication* → **URL Configuration** :
 
-Sans ça, chaque création de compte attend un clic dans un e-mail. Pour deux
-comptes dans une maison, c'est une friction sans contrepartie. L'application
-gère les deux cas, mais autant s'épargner l'aller-retour.
+- **Site URL** → `https://dartois.studio/popott/` — le domaine personnalisé, pas
+  l'adresse `github.io` qui n'est qu'une redirection ;
+- **Redirect URLs** → ajouter `https://dartois.studio/popott/**` et
+  `http://localhost:5173/**` pour pouvoir tester en local.
+
+Sans ce réglage, le lien de confirmation reçu par mail renvoie vers
+`http://localhost:3000`, qui n'existe pas : la création de compte reste bloquée.
+
+On peut aussi supprimer l'étape de confirmation — *Sign In / Providers* → *Email*
+→ décocher **Confirm email**. L'application gère les deux cas. À savoir : l'envoi
+de mails intégré de Supabase est fortement bridé sur l'offre gratuite, quelques
+messages par heure ; en cas de blocage, décocher débloque immédiatement.
 
 ### 4. Brancher l'application
 
@@ -65,7 +74,8 @@ et pousser (`sync.bat` fait les deux).
 Ouvrir le site, créer un compte, puis **Créer un foyer**. Les données déjà
 présentes sur cet appareil deviennent celles du foyer — rien n'est perdu.
 
-Aller ensuite sur `…github.io/popott/#compte` pour lire le **code du foyer**.
+Aller ensuite dans **Réglages → Compte** pour lire le **code du foyer** et le
+copier. (L'adresse `#compte` mène au même endroit, en plein écran.)
 
 ### 7. Les autres appareils
 
@@ -158,8 +168,22 @@ sur l'identité les rendrait sourds l'un à l'autre.
 ### Les comptes
 
 Un compte par personne, un foyer par maison. Le foyer est l'unité de partage,
-et il se rallie par son code — l'identifiant du foyer, affiché dans le
-panneau `#compte`.
+et il se rallie par son code — l'identifiant du foyer, affiché dans
+**Réglages → Compte** (et toujours dans le panneau `#compte`, qui reste la
+version plein écran du même contenu).
+
+`Proto.jsx` ne connaît ni Supabase ni la notion de session. Il reçoit du
+portail trois entrées facultatives — `compte`, `version`, `surActualiser` —
+et affiche les blocs correspondants s'ils existent. Sans elles, en local
+seul ou dans l'environnement d'origine du proto, l'écran est exactement
+celui d'avant.
+
+**Le nom du foyer est dans le document, pas dans la table `foyers`.** La
+colonne `nom` existe côté serveur et reste inutilisée : la mettre à jour
+demanderait une fonction SQL de plus, ne se propagerait pas par le canal
+temps réel, et n'existerait pas en local seul. Rangé dans `menus:v1` à côté
+des personnes et des rayons, le nom se fusionne, se synchronise et
+s'affiche sur les deux téléphones sans une ligne de plus.
 
 Les règles de sécurité tiennent en une phrase : **on ne voit que les documents
 du foyer dont on est membre**. Aucune politique d'insertion n'existe sur
@@ -170,11 +194,6 @@ dans un foyer au hasard.
 ---
 
 ## Ce qui reste ouvert
-
-- **Le panneau compte est à l'adresse `#compte`**, pas dans les réglages. La
-  maquette du proto ne prévoit pas d'entrée « compte », et en glisser une au
-  chausse-pied déplacerait des arbitrages écrits dans `03-decisions.md`. Le jour
-  où une entrée est ajoutée, elle n'aura qu'à pointer là.
 
 - **Hors ligne, l'application doit déjà être ouverte.** Les écritures survivent
   à la coupure, mais lancer le site sans réseau ne charge rien : il manque le

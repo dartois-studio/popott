@@ -1,5 +1,6 @@
 # Publie le prototype sur GitHub Pages a chaque push sur main.
-# Adresse resultante : https://dartois-studio.github.io/popott/
+# Adresse resultante : https://dartois.studio/popott/ (domaine personnalise ;
+# l'adresse dartois-studio.github.io/popott/ y redirige)
 #
 # A faire une seule fois, a la main : Settings → Pages → Source → GitHub Actions.
 #

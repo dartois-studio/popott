@@ -29,7 +29,7 @@ sur le même Wi-Fi. C'est la seule façon honnête de juger l'écran Courses.
 ## Le voir en ligne
 
 Chaque `git push` sur `main` publie le proto sur
-**https://dartois-studio.github.io/popott/** — c'est l'adresse à ouvrir sur le téléphone,
+**https://dartois.studio/popott/** — c'est l'adresse à ouvrir sur le téléphone,
 et celle depuis laquelle l'installer sur l'écran d'accueil.
 
 Le workflow est dans `.github/workflows/pages.yml`. À faire **une seule fois** dans GitHub :

@@ -10,14 +10,15 @@
    des donnees d'exemple. D'ou l'etat `branche`.
    ========================================================================== */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Proto from "./Proto.jsx";
 import { usePortail, EcranPortail, Liaison } from "./auth.jsx";
 import { installerStockageDistant } from "./storage-distant.js";
+import { VERSION, actualiser } from "./version.js";
 
-/** Suit `#compte` dans l'adresse. Une ancre plutot qu'un bouton : la maquette
- *  du proto ne prevoit pas d'entree « compte », et en glisser une deplacerait
- *  des arbitrages ecrits dans doc/03-decisions.md. */
+/** Suit `#compte` dans l'adresse. Les reglages ont desormais un bloc Compte,
+ *  mais l'ancre reste : c'est la version plein ecran du meme contenu, et le
+ *  seul chemin quand l'application n'est pas encore montee. */
 function useAncreCompte() {
   const [ouvert, setOuvert] = useState(() => window.location.hash === "#compte");
   useEffect(() => {
@@ -35,6 +36,16 @@ export default function Portail() {
 
   const { etape, foyerId, membreId } = portail;
 
+  /* Ce que les reglages ont besoin de savoir du compte. `Proto` ne connait ni
+     Supabase ni la notion de session : il recoit des valeurs deja lues et une
+     action a declencher, rien de plus. */
+  const compte = useMemo(() => ({
+    email: portail.email,
+    foyerId: portail.foyerId,
+    depuis: portail.session?.user?.created_at || null,
+    deconnecter: portail.deconnecter,
+  }), [portail.email, portail.foyerId, portail.session?.user?.created_at, portail.deconnecter]);
+
   useEffect(() => {
     if (etape !== "pret" || !foyerId || !membreId) { setBranche(false); return; }
 
@@ -49,7 +60,7 @@ export default function Portail() {
 
   return (
     <>
-      <Proto />
+      <Proto compte={compte} version={VERSION} surActualiser={actualiser} />
       <Liaison />
       {compteOuvert && (
         <div className="pop-calque">

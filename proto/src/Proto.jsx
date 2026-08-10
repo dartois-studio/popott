@@ -264,6 +264,15 @@ const addJ = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); retu
 const parseISO = (s) => { const [a, b, c] = s.split("-").map(Number); return new Date(a, b - 1, c); };
 const jourDe = (d) => `${DOW[(d.getDay() + 6) % 7]}. ${d.getDate()} ${MOIS[d.getMonth()]}`;
 const joursDepuis = (s) => Math.round((new Date().setHours(0, 0, 0, 0) - parseISO(s).getTime()) / 86400000);
+/* Une date complète venue d'ailleurs (build, création de compte) : pas un jour
+   de menu, donc pas le format court de `jourDe`. */
+const dateLisible = (horodatage, avecHeure) => {
+  const d = new Date(horodatage);
+  if (isNaN(d.getTime())) return "";
+  const jour = `${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`;
+  if (!avecHeure) return jour;
+  return `${jour} à ${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
+};
 
 const fmtQ = (n) => {
   if (n == null || isNaN(n)) return "";
@@ -335,7 +344,7 @@ function seed() {
   ];
 
   return {
-    v: 1, rayons, ingredients, plats, personnes, repas,
+    v: 1, nomFoyer: "À la maison", rayons, ingredients, plats, personnes, repas,
     creneaux: [
       { id: "c0", nom: "Petit déjeuner", portee: "semaine" },
       { id: "c1", nom: "Midi", portee: "jour" },
@@ -369,6 +378,7 @@ function migrer(d) {
   d.repas.forEach((r) => { if (!r.repetitions) r.repetitions = 1; });
   d.plats.forEach((p) => { if (!p.saison) p.saison = "toute"; });
   if (!d.presets) d.presets = [];
+  if (typeof d.nomFoyer !== "string") d.nomFoyer = "";
   return d;
 }
 
@@ -404,6 +414,8 @@ const IcUp = <><path d="M6 14l6-6 6 6" /></>;
 const IcDown = <><path d="M6 10l6 6 6-6" /></>;
 const IcSort = <><path d="M4 7h11M4 12h7M4 17h4" /><path d="M18 5v14M15 16l3 3 3-3" /></>;
 const IcTrash = <><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></>;
+const IcMaj = <><path d="M20 11a8 8 0 1 0-.9 4.7" /><path d="M20 5.5V11h-5.5" /></>;
+const IcCompte = <><circle cx="12" cy="8.5" r="3.7" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></>;
 
 /* ============================ Briques d'interface ============================ */
 function Sheet({ title, sub, onClose, children, actions, plein, entete }) {
@@ -1989,8 +2001,87 @@ function EcranCourses({ ctx, ui, setUi }) {
 }
 
 /* ============================ Écran : réglages ============================ */
+
+/** Le compte connecté et le foyer qu'il partage. N'existe que quand la
+ *  synchronisation est configurée : sans compte, il n'y a rien à dire. */
+function BlocCompte({ compte }) {
+  const [copie, setCopie] = useState(false);
+  const depuis = compte.depuis ? dateLisible(compte.depuis) : "";
+
+  const copier = async () => {
+    try {
+      await navigator.clipboard.writeText(compte.foyerId);
+      setCopie(true);
+      setTimeout(() => setCopie(false), 2000);
+    } catch { /* pas de presse-papier : le code reste sélectionnable à la main */ }
+  };
+
+  return (
+    <>
+      <h3 className="sec">Compte</h3>
+      <div className="card">
+        <div className="line">
+          <span className="muted" style={{ flex: "none", display: "grid" }}><Ic d={IcCompte} s={18} /></span>
+          <span className="lbl">{compte.email}
+            <span className="from">{depuis ? `Compte de cet appareil, depuis le ${depuis}` : "Compte de cet appareil"}</span>
+          </span>
+        </div>
+        <div className="line" style={{ minHeight: 0, padding: "12px 14px 12px 12px", alignItems: "flex-start" }}>
+          <span className="lbl">Code du foyer
+            <span className="qty" style={{ display: "block", wordBreak: "break-all", marginTop: 3 }}>{compte.foyerId}</span>
+          </span>
+          <button className="btn ghost sm" style={{ flex: "none" }} onClick={copier}>{copie ? "Copié" : "Copier"}</button>
+        </div>
+      </div>
+      <p className="muted" style={{ fontSize: 12.5, margin: "7px 0 0" }}>
+        Le code se donne au deuxième téléphone, dans « Rallier un foyer existant ».
+        Il se partage comme une clé de maison, pas comme une adresse.
+      </p>
+      <button className="btn ghost" style={{ width: "100%", marginTop: 12 }}
+        onClick={compte.deconnecter}>Se déconnecter</button>
+    </>
+  );
+}
+
+/** Ce que ce téléphone a exactement dans les mains, et de quoi en changer.
+ *  Sans service worker, on ne peut pas annoncer qu'une version plus récente
+ *  existe : le bouton va chercher, il ne prévient pas. */
+function BlocApplication({ version, surActualiser, flash }) {
+  const publiee = version.date ? dateLisible(version.date, true) : "";
+  const detail = [publiee && `Publiée le ${publiee}`, version.commit].filter(Boolean).join(" · ");
+
+  return (
+    <>
+      <h3 className="sec">Application</h3>
+      <div className="card">
+        <div className="line">
+          <span className="lbl">Version {version.numero}
+            {detail && <span className="from">{detail}</span>}
+          </span>
+        </div>
+        {surActualiser && (
+          <button className="line" onClick={() => {
+            flash("Récupération de la dernière version…");
+            // L'enregistrement du document est différé de 400 ms : quitter la
+            // page tout de suite emporterait la dernière modification.
+            setTimeout(surActualiser, 700);
+          }}>
+            <span className="muted" style={{ flex: "none", display: "grid", color: "var(--aubergine)" }}><Ic d={IcMaj} s={18} /></span>
+            <span className="lbl" style={{ color: "var(--aubergine)", fontWeight: 600 }}>Actualiser l'application
+              <span className="from">Recharger le code depuis le serveur</span>
+            </span>
+          </button>
+        )}
+      </div>
+      <p className="muted" style={{ fontSize: 12.5, margin: "7px 0 0" }}>
+        Seul le code est retéléchargé : les plats, les menus et la liste de courses ne bougent pas.
+      </p>
+    </>
+  );
+}
+
 function EcranReglages({ ctx, ui, setUi }) {
-  const { db, up, setDb, setSheet, flash } = ctx;
+  const { db, up, setDb, setSheet, flash, compte, version, surActualiser } = ctx;
 
   if (ui.reglagesVue === "ingredients") {
     return (
@@ -2041,6 +2132,17 @@ function EcranReglages({ ctx, ui, setUi }) {
       <div className="pad" style={{ paddingTop: 4 }}>
         <h3 className="sec">Foyer</h3>
         <div className="card">
+          {/* `key` sur la valeur : le champ n'est pas contrôlé, et sans ça un
+              renommage venu de l'autre téléphone ne se verrait pas ici. */}
+          <div className="line">
+            <span className="muted" style={{ flex: "none", fontSize: 13 }}>Nom du foyer</span>
+            <input key={db.nomFoyer} className="lbl inline-in" defaultValue={db.nomFoyer}
+              placeholder="Chez nous" aria-label="Nom du foyer" style={{ textAlign: "right" }}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (v !== db.nomFoyer) up((d) => { d.nomFoyer = v; });
+              }} />
+          </div>
           {db.personnes.map((p) => (
             <button key={p.id} className="line" onClick={() => setSheet({ t: "personne", pers: p })}>
               <span className="lbl">{p.nom}{p.notes && <span className="from">{p.notes}</span>}</span>
@@ -2086,10 +2188,16 @@ function EcranReglages({ ctx, ui, setUi }) {
             });
           }} />
 
+        {compte && <BlocCompte compte={compte} />}
+
+        {version && <BlocApplication version={version} surActualiser={surActualiser} flash={flash} />}
+
         <h3 className="sec">Données</h3>
         <div className="card" style={{ padding: 14 }}>
           <p className="muted" style={{ fontSize: 13, margin: "0 0 12px" }}>
-            Prototype : tout est enregistré sur cet appareil. La synchronisation entre deux téléphones arrivera en phase 3.
+            {compte
+              ? "Tout est enregistré sur cet appareil et partagé avec le foyer. Réinitialiser ici efface aussi les données des autres téléphones."
+              : "Tout est enregistré sur cet appareil, et nulle part ailleurs."}
           </p>
           <button className="btn danger" style={{ width: "100%" }}
             onClick={() => {
@@ -2107,7 +2215,13 @@ function EcranReglages({ ctx, ui, setUi }) {
 /* ============================ Application ============================ */
 const TABS = [["plats", "Plats", IcPlats], ["semaine", "Semaine", IcCal], ["courses", "Courses", IcCart], ["reglages", "Réglages", IcSet]];
 
-export default function App() {
+/* Trois entrees facultatives, toutes fournies par le point d'entree :
+     compte         qui est connecte et sur quel foyer — absent en local seul
+     version        ce qui est grave dans le fichier publie
+     surActualiser  redemander le code au serveur
+   Absentes, les réglages s'affichent comme avant : le proto tourne toujours
+   tel quel, sans rien autour. */
+export default function App({ compte = null, version = null, surActualiser = null }) {
   const [db, setDb] = useState(null);
   const [tab, setTab] = useState("plats");
   const [semaine, setSemaine] = useState(() => lundi(new Date()));
@@ -2230,6 +2344,7 @@ export default function App() {
 
   const ctx = {
     db, up, setDb, flash, setSheet, setTab, semaine, setSemaine, jours, datesSem, courses, derniereFois,
+    compte, version, surActualiser,
     ingOf: (id) => db.ingredients.find((i) => i.id === id),
     platOf: (id) => db.plats.find((p) => p.id === id),
     persOf: (id) => db.personnes.find((p) => p.id === id),

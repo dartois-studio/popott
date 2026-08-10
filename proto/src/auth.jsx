@@ -9,8 +9,8 @@
 
    Le foyer est l'unite de partage : deux comptes rattaches au meme foyer
    voient les memes plats, le meme menu, la meme liste de courses. On rallie
-   un foyer par son code, que le premier appareil affiche dans le panneau
-   Compte (adresse suivie de `#compte`).
+   un foyer par son code, que le premier appareil affiche dans
+   Reglages → Compte (ou dans le panneau `#compte`, meme contenu).
    ========================================================================== */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -195,11 +195,10 @@ function EcranFoyer({ email, surFoyer, surDeconnexion }) {
 }
 
 /* -------------------------------------------------------- panneau compte ---
-   Accessible en ajoutant `#compte` a l'adresse. Volontairement en dehors de
-   l'application : la maquette du proto ne prevoit pas d'entree « compte »
-   dans les reglages, et en glisser une au chausse-pied deplacerait des
-   choses qui ont ete arbitrees. Le jour ou une entree est ajoutee dans les
-   reglages, elle n'aura qu'a pointer ici.
+   Accessible en ajoutant `#compte` a l'adresse. Les reglages portent
+   desormais le meme contenu — e-mail, code du foyer, deconnexion — dans un
+   bloc Compte ; ce panneau reste la version plein ecran, utile quand il n'y a
+   rien d'autre a montrer.
 */
 
 function PanneauCompte({ email, foyerId, surDeconnexion, surFermer }) {

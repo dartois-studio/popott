@@ -66,8 +66,22 @@ qui a l'air bizarre : plusieurs solutions évidentes ont été essayées puis ab
 - **Tri des échos sur la version, pas sur l'auteur** : deux navigateurs du même PC sont
   souvent connectés au même compte. Se filtrer sur l'identité les rendrait sourds
   l'un à l'autre.
-- **Panneau compte à l'adresse `#compte`**, hors de l'interface : la maquette ne prévoit
-  pas d'entrée « compte », et en glisser une déplacerait des arbitrages ci-dessus.
+- **Panneau compte à l'adresse `#compte`** au départ, hors de l'interface : la maquette
+  ne prévoyait pas d'entrée « compte ». Les réglages en ont une désormais — un bloc
+  *Compte* en bas de liste, avec l'e-mail, le code du foyer et la déconnexion. Le
+  panneau `#compte` n'a pas été retiré : il sert d'écran plein quand il n'y a rien
+  d'autre à montrer.
+- **`Proto.jsx` ne parle toujours pas à Supabase** : il reçoit `compte`, `version` et
+  `surActualiser` du point d'entrée, et affiche les blocs correspondants s'ils existent.
+  Les trois sont facultatifs — sans eux, le proto tourne tel quel.
+- **Nom du foyer dans le document, pas dans la colonne `foyers.nom`** : rangé à côté des
+  personnes et des rayons, il profite de la fusion et du canal temps réel sans une ligne
+  de SQL, et il existe aussi en local seul. La colonne serveur reste inutilisée.
+- **« Actualiser l'application » passe par un paramètre d'adresse** (`?maj=…`), pas par
+  un `location.reload()` : sans service worker, c'est le cache HTTP qui garde l'ancien
+  `index.html`, et un rechargement peut resservir exactement le même fichier. Un bouton
+  qui ne fait rien tout en laissant croire qu'on est à jour est pire que pas de bouton.
+  Le paramètre est retiré de l'adresse au chargement suivant.
 
 ## Reporté volontairement
 

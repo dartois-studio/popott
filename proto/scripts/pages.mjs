@@ -2,8 +2,8 @@
    Popott — build « pages »
 
    Regenere `index.html` a la racine du depot : c'est le fichier que GitHub
-   Pages sert reellement sur https://dartois-studio.github.io/popott/ — la
-   source est la branche, pas le workflow Actions.
+   Pages sert reellement sur https://dartois.studio/popott/ — la source est la
+   branche, pas le workflow Actions.
 
    Meme technique que `npm run solo` — tout dans un fichier, aucun module ES,
    aucun chemin absolu — avec deux differences qui comptent :
