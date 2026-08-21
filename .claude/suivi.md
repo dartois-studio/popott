@@ -1,8 +1,8 @@
 # Suivi popott
 
-_Généré le 10/08/2026 18:17:00. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
+_Généré le 11/08/2026 16:57:19. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
 
-_Convention : au terme du code, chaque IA renseigne `codedWith` sur chaque ticket avec son nom exact avant tout passage à `Fait`._
+_Convention : au terme du code, l’IA renseigne `codedWith` sur chaque ticket avec `Claude Code`, `ChatGPT`, `Mixte` ou le nom exact de toute autre IA avant tout passage à `Fait`._
 
 ## Résumé
 
@@ -111,7 +111,7 @@ Trois gardes ajoutées à `npm run verif`, sur les pannes qui ne se voient qu'ap
 
 `sync.bat` attend désormais la publication et annonce quand c'est en ligne, ou pourquoi ça a échoué.
 
-<sub>créé le 2026-08-10 · maj 2026-08-10T15:46:46.349Z · Codé avec Claude Code</sub>
+<sub>créé le 2026-08-10 · maj 2026-08-11T14:57:17.755Z · Codé avec Claude Code</sub>
 
 #### POP-001 · Bug · P1 · Interface
 **Le titre de rayon se place au milieu des articles dans la liste de courses**
@@ -124,7 +124,7 @@ Correctif : `overflow:clip` au lieu de `hidden`. Même rognage aux coins arrondi
 
 Dégradation si `overflow:clip` n'est pas connu du navigateur : le sticky fonctionne quand même, seuls les coins hauts du ticket redeviennent carrés.
 
-<sub>créé le 2026-08-10 · Codé avec Claude Code</sub>
+<sub>créé le 2026-08-10 · maj 2026-08-11T14:57:18.315Z · Codé avec Claude Code</sub>
 
 #### POP-003 · Autre · P1 · Global
 **Découper App.jsx : 2 430 lignes dans un seul fichier**
@@ -141,4 +141,4 @@ L'empreinte a rattrapé un import manquant (`MOIS`) que la compilation laissait 
 
 **Reste à vérifier à la main** : le balayage n'atteint que 11 des 14 panneaux. Copie de semaine, semaines types, remplissage automatique et fiche ingrédient ne sont couverts que par la preuve statique.
 
-<sub>créé le 2026-08-10T16:13:01.961Z · Codé avec Claude Code</sub>
+<sub>créé le 2026-08-10T16:13:01.961Z · maj 2026-08-11T14:57:19.334Z · Codé avec Claude Code</sub>
