@@ -1,8 +1,8 @@
 # Suivi popott
 
-_Généré le 11/08/2026 16:57:19. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
+_Généré le 27/08/2026 16:04:10. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
 
-_Convention : au terme du code, l’IA renseigne `codedWith` sur chaque ticket avec `Claude Code`, `ChatGPT`, `Mixte` ou le nom exact de toute autre IA avant tout passage à `Fait`._
+_Convention : au terme du code, chaque IA renseigne `codedWith` sur chaque ticket avec son nom exact avant tout passage à `Fait`._
 
 ## Résumé
 
