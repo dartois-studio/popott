@@ -40,7 +40,7 @@ Ne pas charger tout `doc/` d'un coup. Ouvrir seulement ce qui concerne la tâche
 | Couleurs, typo, espacements, composants | `doc/05-design-system.md` |
 | Comptes, foyer, fusion, temps réel | `doc/07-synchronisation.md` |
 | Logo, favicon, icône PWA | `doc/06-marque-et-icones.md` |
-| Planifier | `doc/04-roadmap.md` |
+| Planifier, savoir ce qui reste ouvert (PWA, découpage du document) | `doc/04-roadmap.md` |
 
 ## Règles
 
@@ -96,21 +96,6 @@ servie.
 Les clés Supabase vivent à deux endroits qu'il faut garder d'accord : `app/.env` en
 local, et les secrets `SUPABASE_URL` / `SUPABASE_ANON_KEY` du dépôt pour la publication.
 
-## Chantiers ouverts
-
-Dans l'ordre où ils ont du sens :
-
-1. **PWA** — manifeste et icônes sont en place, le site est publié en HTTPS sur
-   GitHub Pages, il manque le service worker et la mise en cache de la liste de courses.
-   C'est ce qui bloque le lancement hors ligne en magasin : la synchronisation garde
-   déjà les écritures faites sans réseau, mais la page elle-même ne se charge pas.
-2. **Découper le document** — tout l'état tient dans une seule clé `menus:v1`, renvoyée
-   en entier à chaque frappe. La fusion à trois voies rend ça sûr, pas léger. Sortir
-   `etats` dans sa propre clé serait le premier gain.
-
-Le découpage de `App.jsx` est fait : 2 430 lignes réparties en seize modules, rendu
-prouvé identique. Le plus gros fichier restant est `feuilles/Repas.jsx`, 317 lignes.
-
 ## Ce qui est volontairement reporté
 
 Ne pas les implémenter sans demander : portions fines par personne, gestion des restes
@@ -122,14 +107,16 @@ Le suivi vit dans `.claude` :
 
 | Fichier | Statut | Usage |
 |---|---|---|
-| `.claude/suivi.json` | **source de vérité** | à lire et à écrire |
-| `.claude/suivi.md` | dérivé | lecture rapide — **ne jamais éditer à la main** |
+| `.claude/suivi-actif.md` | dérivé **à lire** | l'actionnable seul : tickets ouverts, lots non clos, décisions, reprise (~1 Ko) |
+| `.claude/suivi.json` | **source de vérité** | à **écrire**, par Edit ciblé — jamais à relire en entier |
+| `.claude/suivi.md` | dérivé complet | **ne jamais éditer, ni lire par défaut** |
 | `.claude/suivi-projet.html` | interface | ouvert par Guillaume dans le navigateur |
 | `.claude/suivi-captures/` | captures PNG | référencées par les tickets |
 
 **Règles :**
 
-1. « Regarde le suivi » → lire `.claude/suivi.json` (pas le `.html`, trop gros ; pas le `.md`, dérivé).
+1. « Regarde le suivi » → lire `.claude/suivi-actif.md`, **rien d'autre**. N'ouvrir `suivi.json`
+   que pour **écrire**, par Edit ciblé ; ne jamais ouvrir le `.html` ni `suivi.md`.
 2. Toute écriture se fait dans `suivi.json`, en **conservant le format exact** : indentation
    2 espaces, `": "` après les clés, accents littéraux, LF, **pas** de newline final. C'est le
    format de `JSON.stringify(x, null, 2)` — le respecter évite un diff parasite à chaque tour.
