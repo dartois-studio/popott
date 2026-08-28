@@ -1,6 +1,6 @@
 # popott — suivi actif
 
-_Dérivé de `suivi.json` le 27/08/2026 16:04. **Ne pas éditer** : régénérer avec `.claude\generate-suivi.ps1`. Pour écrire, ouvrir `suivi.json` par Edit ciblé._
+_Dérivé de `suivi.json` le 28/08/2026 12:53. **Ne pas éditer** : régénérer avec `.claude\generate-suivi.ps1`. Pour écrire, ouvrir `suivi.json` par Edit ciblé._
 
 **Résumé** — 5 ouverts · 0 lots non clos · en cours : — · branche : —
 
