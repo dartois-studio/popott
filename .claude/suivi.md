@@ -1,6 +1,6 @@
 # Suivi popott
 
-_Généré le 10/09/2026 08:39:03 par `.claude\generate-suivi.ps1`. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
+_Généré le 10/09/2026 13:57:34 par `.claude\generate-suivi.ps1`. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
 
 _Convention : au terme du code, chaque IA renseigne `codedWith` sur chaque ticket avec son nom exact avant tout passage à `Fait`._
 

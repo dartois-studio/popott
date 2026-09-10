@@ -67,6 +67,8 @@
                  background: var(--accent); color: #fff; font-weight: 800; font-size: 15px; letter-spacing: -.5px; }
   .brand h1 { font-size: 19px; margin: 0; letter-spacing: -.2px; }
   .brand .sub { color: var(--muted); font-size: 12.5px; }
+  .brand .pagever { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums;
+                    border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; cursor: help; }
   .spacer { flex: 1; }
   .storage {
     display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted);
@@ -612,6 +614,7 @@
       <div class="brand-badge" id="brandBadge"></div>
       <h1 id="brandName">Projet</h1>
       <span class="sub" id="brandTagline">Suivi projet</span>
+      <span class="pagever" id="pageVer" title="Version de la page"></span>
     </div>
     <div class="spacer"></div>
     <button class="storage statpill hidden" id="statPill" title="Stats du projet"></button>
@@ -877,7 +880,7 @@
       <li><b>Sans rien faire</b> : gardé dans ton navigateur (invisible pour Claude, mais conservé même si tu fermes l’onglet).</li>
       <li><b>Recommandé (Chrome/Edge)</b> : clique <b>« Connecter .claude »</b> en haut, une fois, et choisis le dossier <span class="k">.claude</span>. L’app écrit alors de vrais fichiers : <span class="k">suivi.json</span> (les données — léger : les captures y sont de simples références), <span class="k">suivi.md</span> (version lisible par Claude) et les captures en PNG dans <span class="k">suivi-captures\</span>.</li>
     </ul>
-    <p><b>Reconnexion &amp; anti-perte :</b> aux fois suivantes, la page se reconnecte <b>toute seule</b> si le navigateur l’autorise ; sinon la pastille passe en <b>orange « Déconnecté — clique pour reconnecter »</b>. Et si tu avais saisi des choses hors-connexion, <b>rien n’est écrasé en silence</b> : la page affiche un <b>mini-journal des différences</b> entre tes saisies et le <span class="k">suivi.json</span> du disque, tu choisis quelle version garder, et l’autre est toujours sauvegardée (<span class="k">suivi.backup-….json</span>).</p>
+    <p><b>Reconnexion &amp; anti-perte :</b> aux fois suivantes, la page se reconnecte <b>toute seule</b> si le navigateur l’autorise ; sinon la pastille passe en <b>orange « Déconnecté — clique pour reconnecter »</b>. Et si tu avais saisi des choses hors-connexion, <b>rien n’est écrasé en silence</b> : la page affiche un <b>mini-journal des différences</b> entre tes saisies et le <span class="k">suivi.json</span> du disque, tu choisis quelle version garder, et l’autre est toujours sauvegardée (<span class="k">suivi.backup-….json</span>, les <b>3 dernières</b> seulement).</p>
 
     <h4>4. Comment Claude lit et utilise ça</h4>
     <p>Tu lui dis simplement « <i>regarde le suivi</i> ». Claude Code ou ChatGPT ouvre <span class="k">.claude\suivi.md</span> : il voit le résumé chiffré, chaque entrée avec son ID (<span class="k">{{prefix}}-014</span>), les lots, l’outil qui a réalisé le code et les captures qu’il peut vraiment ouvrir. Il te propose des lots calibrés pour une PR, tu valides, il code.</p>
@@ -929,7 +932,7 @@
     <h3>⚠ Tes saisies locales diffèrent du suivi.json de .claude</h3>
     <div class="hint-sm" id="conflictNewer"></div>
     <div id="conflictLog" style="max-height:46vh;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--panel-2);font-size:12.5px;line-height:1.7"></div>
-    <div class="hint-sm" style="margin-top:10px">La version que tu ne choisis pas est <b>toujours sauvegardée</b> (aucune perte) : le disque part en <span class="k">suivi.backup-….json</span>, le local reste dans le navigateur.</div>
+    <div class="hint-sm" style="margin-top:10px">La version que tu ne choisis pas est <b>toujours sauvegardée</b> (aucune perte) : le disque part en <span class="k">suivi.backup-….json</span>, le local reste dans le navigateur. Ces sauvegardes sont <b>bornées aux 3 dernières</b> — la 4<sup>e</sup> chasse la plus ancienne, des deux côtés.</div>
     <div class="modal-foot" style="justify-content:space-between;gap:8px;flex-wrap:wrap">
       <button class="btn ghost" id="conflictCancel">Annuler</button>
       <span style="flex:1"></span>
@@ -1046,6 +1049,19 @@ const PROJECT = {
 };
 /* ▲▲▲  FIN DE LA CONFIG — au-delà, code générique  ▲▲▲ */
 
+/* ---- Version de la PAGE (ATL-049) ----
+   Elle versionne CE FICHIER — la souche `templates/suivi-projet/suivi-projet.template.html` de
+   l'Atelier — et rien d'autre. Elle se trouve donc hors du bloc CONFIG, dans le corps que
+   `tools/propager-suivi.js` recopie tel quel : un dépôt ne l'édite jamais, il la reçoit.
+   À incrémenter dans la souche À CHAQUE correction du corps, avant de propager. Sans elle, la
+   seule réponse à « laquelle de ces six copies est la plus récente » était le sha1 : mesuré le
+   10/09/2026, les six trackers pesaient de 232 424 à 232 785 o pour sept empreintes distinctes.
+   NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
+   champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
+   affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
+const PAGE_VERSION = "1.0";
+const PAGE_VERSION_DATE = "2026-09-10";
+
 /* Dérivés de la config (ne pas éditer) */
 const DLV = PROJECT.delivery;
 const S_MERGED = DLV.stageMerged, S_DONE = DLV.stageDone;
@@ -1086,6 +1102,47 @@ function classeLot(st){
   if(!st) return "";
   const d = (state && state.socle && state.socle.statutsLot) || null;
   return (d && d[st]) || SOCLE_DEFAUT.statutsLot[st] || "";
+}
+/* ---- Les extensions déclarées : ce que la page a le droit de RENDRE (ATL-049, SOCLE.md §3 et §5) ----
+   Un champ d'extension se rend si `socle.extensions` le NOMME, ou s'il PORTE une valeur ; jamais
+   parce qu'une liste écrite en dur dans la page le prévoit. Le défaut jouait dans les deux sens,
+   mesuré le 10/09/2026 sur les six dépôts :
+     · `builtSw` était câblé dans les six copies alors que seul PatternStudio le remplit (25
+       entrées / 35 lots) — popott et UI Design Library, qui ne compilent rien, en portaient le
+       décor pour 0 valeur ; la ligne « Branche » du pop-up d'un lot s'affichait « — » partout,
+       y compris dans les deux dépôts qui n'ont pas un seul `branch` ;
+     · à l'inverse `platform` (65 entrées) et `version` (42) de Sable, et les 25 `branch` des
+       entrées de RoomLab, n'avaient AUCUN endroit où se rendre. La donnée était là, la page
+       muette — perte d'affichage, pas perte de donnée, même forme que le gain d'ATL-048.
+   « Ou s'il porte une valeur » n'est pas une tolérance de confort : c'est la règle qui empêche
+   la correction de créer à son tour une perte d'affichage sur un dépôt en dette de déclaration.
+   Et la RÈGLE DU §5 TIENT : on rend, on ne décide pas. Aucune de ces lectures ne choisit un
+   statut, un lot à reprendre ou un texte à écrire.
+   Le FORMULAIRE, lui, ne se ferme pas : c'est par lui qu'une extension reçoit sa première
+   valeur, et on ne déclare que ce que le fichier contient (SOCLE.md §4). Fermer la porte au nom
+   de la déclaration rendrait la déclaration impossible à mériter. */
+const EXT_KV = [
+  { champ:"branch",   portee:"les deux", label:()=>"Branche",    fmt:v=>esc(String(v)) },
+  { champ:"builtSw",  portee:"les deux", label:()=>S_DONE,       fmt:v=>esc(fmtDate(v)) },
+  { champ:"platform", portee:"entree",   label:()=>"Plateforme", fmt:v=>esc(String(v)) },
+  { champ:"version",  portee:"entree",   label:()=>"Version",    fmt:v=>esc(String(v)) }
+];
+function extDeclaree(champ){
+  const d = state && state.socle && state.socle.extensions;
+  return Array.isArray(d) && d.includes(champ);
+}
+const extRempli = (o,c) => !!o && o[c]!==undefined && o[c]!==null && o[c]!=="";
+function extRendable(champ, o){ return extRempli(o,champ) || extDeclaree(champ); }
+/* Les lignes d'extension de la grille `kv` d'un pop-up — ticket comme lot, même mécanisme.
+   Un champ déclaré mais vide sort en « — » : c'est la dette de saisie du §1, qui doit se voir.
+   Un champ ni déclaré ni rempli ne sort pas du tout : ce n'est pas ce dépôt-là.
+   La PORTÉE vient de la colonne « Sur » du §3 et ne dit PAS si le champ se rend, seulement OÙ :
+   `platform` et `version` sont des champs d'entrée, et Sable les déclarant, ils sortaient sinon
+   en « — » sur chacun de ses lots — un décor de plus, exactement ce que ce ticket retire. */
+function extKvHtml(o, portee){
+  return EXT_KV.filter(x=>(x.portee==="les deux" || x.portee===portee) && extRendable(x.champ,o))
+               .map(x=>`<span class="k">${esc(x.label())}</span><span>${extRempli(o,x.champ)?x.fmt(o[x.champ]):"—"}</span>`)
+               .join("");
 }
 const CODERS  = ["", ...PROJECT.coders];
 const CODER_LABEL = Object.assign({ "":"Non renseigné" }, ...PROJECT.coders.map(c=>({[c]:c})));
@@ -1368,7 +1425,9 @@ function tsStamp(){ const d=new Date(), p=n=>String(n).padStart(2,"0");
 async function backupDiskJson(){
   try { const fh = await dirHandle.getFileHandle("suivi.json");
     const txt = await (await fh.getFile()).text();
-    await writeFile(`suivi.backup-${tsStamp()}.json`, txt); return true;
+    await writeFile(`suivi.backup-${tsStamp()}.json`, txt);
+    await pruneDiskBackups(BACKUP_KEEP);      // la réserve disque est bornée comme celle du navigateur
+    return true;
   } catch(e){ return false; }
 }
 /* Écriture locale tolérante à la saturation.
@@ -1407,6 +1466,31 @@ function lsSet(key, val){
   return false;
 }
 function backupLocalToLS(){ pruneBackups(BACKUP_KEEP-1, false); lsSet(NS("tracker_backup_")+tsStamp(), JSON.stringify(state)); }
+
+/* Réserve DISQUE : `suivi.backup-….json` dans .claude, écrit à chaque « Garder mes saisies
+   locales ». ATL-030 n'avait borné que la réserve du navigateur ; celle-ci n'était bornée nulle
+   part, et personne ne l'effaçait jamais — 25 fichiers pour 9,90 Mo relevés sur Sable le
+   10/09/2026, dont un seul suivi.json de 807 Ko recopié 25 fois.
+   Le tri suit la DATE du fichier, jamais son nom : trois générations de la page ont écrit trois
+   formats d'horodatage (`20260904-153758`, `202609041359304`, `20260906211813.`), qui ne se
+   comparent pas entre eux. Le motif est donc large à dessein — il doit balayer aussi les anciens. */
+const BACKUP_FILE = /^suivi\.backup-.+\.json$/i;
+async function pruneDiskBackups(keep){
+  if(!dirHandle) return 0;
+  const files = [];
+  try {
+    for await (const [name, h] of dirHandle.entries()){
+      if(h.kind!=="file" || !BACKUP_FILE.test(name)) continue;
+      files.push({ name, t:(await h.getFile()).lastModified });
+    }
+  } catch(e){ return 0; }                     // navigateur sans itération de dossier : on ne purge pas
+  files.sort((a,b)=> a.t-b.t);                // la plus ancienne en tête
+  let n=0;
+  for(const f of files.slice(0, Math.max(0, files.length-keep))){
+    try { await dirHandle.removeEntry(f.name); n++; } catch(e){}
+  }
+  return n;
+}
 
 /* ---------- Modale de conflit (mini-log des différences) ---------- */
 let conflictCtx = null;
@@ -1751,6 +1835,42 @@ function fillForm(e){
   renderPending();
 }
 
+/* ---------- ATL-051 : aucune saisie ne se perd sur un geste de fermeture ----------
+   Le clic hors du cadre était déjà neutralisé en édition (PS-046). Restaient « Annuler » et
+   Échap, qui vidaient le formulaire sans un mot — et les `desc` de ce parc font couramment
+   plusieurs milliers de caractères.
+   La question posée est TOUCHÉ, pas « non vide » : « Modifier » remplit le formulaire, donc un
+   formulaire plein ne prouve rien. On compare l'état courant à l'instantané pris au moment
+   d'entrer en édition. C'est aussi ce qui distingue ces fonctions de `formBusy()`, qui répond à
+   une autre question — « y a-t-il quelque chose à l'écran ? » — pour l'auto-rechargement. */
+const TK_FIELDS  = ["fTitle","fDesc","fType","fDom","fLot","fPrio","fStat","fCoderManual"];
+const LOT_FIELDS = ["leName","leGoal","leBranch","lePr","leOrder"];
+const ABANDON_MSG = "Cette saisie n'est pas enregistrée. L'abandonner ?";
+let tkClean="", lotClean="";
+function snapFields(ids, extra){
+  return JSON.stringify(ids.map(id=>{ const n=$("#"+id); return n?n.value:""; }).concat(extra||[]));
+}
+function tkSnap(){ return snapFields(TK_FIELDS, [pending.map(p=>p.name||"").join("|")]); }
+function lotSnap(){ return snapFields(LOT_FIELDS); }
+function markTkClean(){ tkClean=tkSnap(); }
+function markLotClean(){ lotClean=lotSnap(); }
+function tkDirty(){ return $("#ticketBox").classList.contains("editing") && tkSnap()!==tkClean; }
+function lotDirty(){ return $("#lotBox").classList.contains("editing") && lotSnap()!==lotClean; }
+/* Rend faux si l'utilisateur refuse d'abandonner — l'appelant sort alors sans rien fermer. */
+function okToDropTicket(){ return !tkDirty() || confirm(ABANDON_MSG); }
+function okToDropLot(){ return !lotDirty() || confirm(ABANDON_MSG); }
+/* Les trois champs « Nouvelle … » de la modale Gérer partent vides : ici, non vide = touché.
+   Les champs de renommage de la même modale, eux, valident sur `change` (donc au blur) : ce
+   qui y est tapé est déjà enregistré quand la modale se ferme, rien à protéger. */
+function manageBusy(){
+  return ["catNew","typeNew","lotNew"].some(id=>{ const n=$("#"+id); return n && n.value.trim()!==""; });
+}
+function closeManage(){
+  if(manageBusy() && !confirm(ABANDON_MSG)) return;
+  ["catNew","typeNew","lotNew"].forEach(id=>{ const n=$("#"+id); if(n) n.value=""; });
+  $("#manageModal").classList.remove("show");
+}
+
 /* ---------- Navigation entre pop-ups (historique + retour) ---------- */
 let navStack=[], navType=null, navKey=null;
 function updateBack(){ const show=navStack.length>0;
@@ -1766,12 +1886,14 @@ function closeDetail(){ navStack=[]; navType=null; resetForm();
   $("#ticketBox").classList.remove("editing"); $("#lotBox").classList.remove("editing"); updateBack(); }
 
 /* ---------- Rendu de la ligne PR (partagé ticket + lot) ---------- */
+/* La famille PR seule. `builtSw` en est sorti par ATL-049 : accroché ici, il ne s'affichait que
+   si l'objet portait AUSSI un numéro de PR — un lot marqué à l'étape finale sans passer par une
+   PR gardait sa date invisible. Il est passé dans la grille `kv`, avec les autres extensions. */
 function prHtml(o){
-  if(!o.pr) return "";
-  const p=[]; p.push(o.prUrl?`<a href="${esc(o.prUrl)}" target="_blank" rel="noopener">#${esc(String(o.pr))} ↗</a>`:`#${esc(String(o.pr))}`);
-  if(o.prState) p.push(`<span class="st-select ${o.prState==='merged'?'st-done':'st-pr'}">${o.prState==='merged'?'Mergé':esc(o.prState)}</span>`);
-  if(o.merged) p.push(`<span style="color:var(--muted)">· mergé ${esc(fmtDate(o.merged))}</span>`);
-  if(o.builtSw) p.push(`<span style="color:var(--muted)">· ${esc(DLV.participle)} ${esc(fmtDate(o.builtSw))}</span>`);
+  if(!extRendable("pr",o) || !o.pr) return "";
+  const p=[]; p.push(extRempli(o,"prUrl")?`<a href="${esc(o.prUrl)}" target="_blank" rel="noopener">#${esc(String(o.pr))} ↗</a>`:`#${esc(String(o.pr))}`);
+  if(extRendable("prState",o) && o.prState) p.push(`<span class="st-select ${o.prState==='merged'?'st-done':'st-pr'}">${o.prState==='merged'?'Mergé':esc(o.prState)}</span>`);
+  if(extRendable("merged",o) && o.merged) p.push(`<span style="color:var(--muted)">· mergé ${esc(fmtDate(o.merged))}</span>`);
   return p.join(" ");
 }
 
@@ -1795,6 +1917,7 @@ function buildTicketRead(e){
   if(gs) h+=`<div><div class="sec-title">💰 Gain mesuré</div><div class="decision"><span class="d-date">${esc(e.gain.date?fmtDate(e.gain.date):'')}</span> — ${esc(gs)}</div></div>`;
   h+=`<div class="kv"><span class="k">Créé</span><span>${esc(fmtDate(e.created))}</span><span class="k">Mis à jour</span><span>${esc(fmtDate(e.updated))}</span>`;
   if(e.archived) h+=`<span class="k">Archivé</span><span>${esc(fmtDate(e.archived))}</span>`;
+  h+=extKvHtml(e,"entree");   // ATL-049 : `platform`, `version`, `branch`… si le dépôt les déclare ou les porte
   h+=`</div>`;
   const box=$("#tkRead"); box.innerHTML=h;
   box.querySelectorAll(".caps img").forEach(img=>img.onclick=()=>openLb(img.src));
@@ -1804,6 +1927,7 @@ function openTicketNew(){
   $("#ticketBox").dataset.mode="new"; $("#tkId").textContent=""; $("#tkTitle").textContent="＋ Nouvelle entrée"; $("#tkRead").innerHTML="";
   $("#lotModal").classList.remove("show");
   $("#ticketBox").classList.add("editing"); $("#ticketModal").classList.add("show"); $("#fTitle").focus();
+  markTkClean();
 }
 function openTicketDetail(n, opts={}){
   const e=state.entries.find(x=>x.n===n); if(!e) return;
@@ -1816,8 +1940,9 @@ function openTicketDetail(n, opts={}){
   buildTicketRead(e);
   $("#lotModal").classList.remove("show"); $("#ticketModal").classList.add("show");
 }
-function tkEnterEdit(){ const e=state.entries.find(x=>x.n===navKey); if(!e) return; fillForm(e); $("#ticketBox").dataset.mode="edit"; $("#ticketBox").classList.add("editing"); $("#fTitle").focus(); }
-function tkCancel(){ const mode=$("#ticketBox").dataset.mode; resetForm();
+function tkEnterEdit(){ const e=state.entries.find(x=>x.n===navKey); if(!e) return; fillForm(e); $("#ticketBox").dataset.mode="edit"; $("#ticketBox").classList.add("editing"); $("#fTitle").focus(); markTkClean(); }
+function tkCancel(){ if(!okToDropTicket()) return;   // ATL-051
+  const mode=$("#ticketBox").dataset.mode; resetForm();
   if(mode==="new"){ closeDetail(); }
   else { $("#ticketBox").dataset.mode="view"; $("#ticketBox").classList.remove("editing"); const e=state.entries.find(x=>x.n===navKey); if(e) buildTicketRead(e); } }
 function startEdit(id){ openTicketDetail(id); }   // clic titre → lecture ; « Modifier » pour éditer
@@ -1836,8 +1961,8 @@ function buildLotRead(l){
   h+=`</div></div>`;
   const dec=l.decisions||[];
   if(dec.length){ h+=`<div><div class="sec-title">📌 Décisions <span class="cnt">${dec.length}</span></div>`+dec.map(d=>`<div class="decision"><span class="d-date">${esc(d.date?fmtDate(d.date):'')}</span> — ${esc(d.txt||'')}</div>`).join("")+`</div>`; }
-  h+=`<div class="kv"><span class="k">Ordre</span><span>${l.order!=null?l.order:'—'}</span><span class="k">Branche</span><span>${l.branch?esc(l.branch):'—'}</span>`;
-  if(l.builtSw) h+=`<span class="k">${esc(S_DONE)}</span><span>${esc(fmtDate(l.builtSw))}</span>`;
+  h+=`<div class="kv"><span class="k">Ordre</span><span>${l.order!=null?l.order:'—'}</span>`;
+  h+=extKvHtml(l,"lot");   // ATL-049 : « Branche » et la date d'étape finale ne sont plus câblées ici
   h+=`</div>`;
   const box=$("#lotRead"); box.innerHTML=h;
   box.querySelectorAll(".linkrow").forEach(row=>row.onclick=()=>navTicket(+row.dataset.n));
@@ -1862,8 +1987,11 @@ function openLotDetail(id, opts={}){
   $("#leName").value=l.name||""; $("#leGoal").value=l.goal||""; $("#leBranch").value=l.branch||""; $("#lePr").value=l.pr||""; $("#leOrder").value=(l.order!=null?l.order:"");
   $("#ticketModal").classList.remove("show"); $("#lotModal").classList.add("show");
 }
-function lotEnterEdit(){ $("#lotBox").dataset.mode="edit"; $("#lotBox").classList.add("editing"); $("#leName").focus(); }
-function lotCancel(){ $("#lotBox").classList.remove("editing"); $("#lotBox").dataset.mode="view"; const l=state.lots.find(x=>x.id===navKey); if(l) buildLotRead(l); }
+function lotEnterEdit(){ $("#lotBox").dataset.mode="edit"; $("#lotBox").classList.add("editing"); $("#leName").focus(); markLotClean(); }
+function lotCancel(){ if(!okToDropLot()) return;   // ATL-051
+  const l0=state.lots.find(x=>x.id===navKey);
+  if(l0){ $("#leName").value=l0.name||""; $("#leGoal").value=l0.goal||""; $("#leBranch").value=l0.branch||""; $("#lePr").value=l0.pr||""; $("#leOrder").value=(l0.order!=null?l0.order:""); }
+  $("#lotBox").classList.remove("editing"); $("#lotBox").dataset.mode="view"; if(l0) buildLotRead(l0); }
 function lotSave(){
   const l=state.lots.find(x=>x.id===navKey); if(!l) return;
   l.name=$("#leName").value.trim()||l.name; l.goal=$("#leGoal").value.trim(); l.branch=$("#leBranch").value.trim();
@@ -2607,7 +2735,20 @@ function sortRows(rows, f){
 }
 
 /* ---------- Rendu ---------- */
+/* Le chip de version de l'en-tête (ATL-049). Le NUMÉRO est celui de la page et ne bouge qu'à une
+   propagation ; l'INFOBULLE porte en plus le contrat de données du dépôt, `socle.version`, qui
+   n'est connu qu'une fois `suivi.json` chargé — d'où la remise à jour ici plutôt qu'au démarrage.
+   Les deux nombres se lisent côte à côte parce que la garde du 07/09 interdit de les fusionner. */
+function majPageVer(){
+  const c=$("#pageVer"); if(!c) return;
+  c.textContent="v"+PAGE_VERSION;
+  const sv = state && state.socle && state.socle.version;
+  c.title = "Page de suivi v"+PAGE_VERSION+" ("+fmtDate(PAGE_VERSION_DATE)+") — souche templates/suivi-projet/ de l'Atelier."
+          + "\nContrat de données de ce dépôt (socle.version) : " + (sv ? sv : "0 — non déclaré, repli sur les libellés de référence")
+          + "\nDeux numéros distincts : l'un versionne la page, l'autre les champs et les statuts du suivi.json.";
+}
 function render(){
+  majPageVer();
   const f=currentFilter();
   const rows=filteredRows(f);
   const c=$("#view"); c.className="as-"+view; c.innerHTML="";
@@ -3519,6 +3660,9 @@ function wire(){
   /* --- Échap + raccourci N --- */
   document.addEventListener("keydown",e=>{
     if(e.key==="Escape"){
+      // ATL-051 : « ⚙ gérer » s'ouvre PAR-DESSUS un ticket en édition. Sans cette sortie, Échap
+      // fermait Gérer (handler plus bas) ET annulait l'édition dessous, d'un seul geste.
+      if($("#manageModal").classList.contains("show")) return;
       if($("#ticketBox").classList.contains("editing")){ tkCancel(); return; }
       if($("#lotBox").classList.contains("editing")){ lotCancel(); return; }
       if($("#ticketModal").classList.contains("show")||$("#lotModal").classList.contains("show")){ closeDetail(); return; }
@@ -3614,8 +3758,8 @@ function wire(){
   $("#typeNew").addEventListener("keydown",e=>{ if(e.key==="Enter") addToList("types","typeNew"); });
   $("#lotAdd").onclick=()=>addLot();
   $("#lotNew").addEventListener("keydown",e=>{ if(e.key==="Enter") addLot(); });
-  $("#manageClose").onclick=()=>$("#manageModal").classList.remove("show");
-  $("#manageModal").addEventListener("click",e=>{ if(e.target.id==="manageModal") $("#manageModal").classList.remove("show"); });
+  $("#manageClose").onclick=closeManage;                                                                    // ATL-051
+  $("#manageModal").addEventListener("click",e=>{ if(e.target.id==="manageModal") closeManage(); });         // ATL-051
 
   // Aide
   $("#helpBtn").onclick=()=>$("#helpModal").classList.add("show");
@@ -3651,7 +3795,7 @@ function wire(){
   $("#importInput").onchange=()=>{ if($("#importInput").files[0]) importJson($("#importInput").files[0]); $("#importInput").value=""; };
 
   $("#lightbox").onclick=()=>$("#lightbox").classList.remove("show");
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ $("#manageModal").classList.remove("show"); $("#helpModal").classList.remove("show"); $("#statsModal").classList.remove("show"); $("#conflictModal").classList.remove("show"); $("#lightbox").classList.remove("show"); closeArchiveLotModal(); closeUnarchiveLotModal(); closeArchiveEntryLotModal(); } });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if($("#manageModal").classList.contains("show")){ closeManage(); return; } /* ATL-051 */ $("#helpModal").classList.remove("show"); $("#statsModal").classList.remove("show"); $("#conflictModal").classList.remove("show"); $("#lightbox").classList.remove("show"); closeArchiveLotModal(); closeUnarchiveLotModal(); closeArchiveEntryLotModal(); } });
 }
 
 /* ---------- Identité du projet : applique PROJECT à l’interface ---------- */
@@ -3672,6 +3816,7 @@ function applyBranding(){
   } else $("#brandBadge").textContent = initial;
   $("#brandName").textContent = PROJECT.name;
   $("#brandTagline").textContent = PROJECT.tagline;
+  majPageVer();   // avant tout chargement : le numéro de page est déjà juste, l'infobulle se complètera
   $("#statPill").title = `PR mergées sur 7 jours · cycle moyen création→${DLV.participle} des lots · ${DLV.noun}s en attente — clic : stats détaillées`;
   /* Aide : les jetons {{…}} du texte prennent les valeurs de la config (avant wire(), donc sans écouteur perdu). */
   const tok = {
