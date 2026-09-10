@@ -138,20 +138,22 @@
   },
   "savedAt": "2026-08-11T14:57:19.742Z",
   "socle": {
-    "version": 1,
+    "version": 2,
     "statutsEntree": {
       "À faire": "ouvert",
       "En cours": "en-travail",
       "En PR": "en-travail",
       "Fait": "clos",
-      "Parké": "hors"
+      "Parké": "hors",
+      "Abandonné": "hors"
     },
     "statutsLot": {
       "Planifié": "ouvert",
       "En cours": "en-travail",
       "En PR": "en-travail",
       "Terminé": "clos",
-      "Mergé — à vérifier": "en-travail"
+      "Mergé — à vérifier": "en-travail",
+      "Abandonné": "hors"
     },
     "extensions": []
   }

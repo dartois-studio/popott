@@ -22,6 +22,7 @@
 
     --p0: #e5484d; --p1: #f5a623; --p2: #3b82f6; --p3: #9aa4af;
     --st-todo: #8a94a0; --st-doing: var(--accent); --st-pr: #3b82f6; --st-done: #2e9e5b; --st-park: #b28ce0;
+    --st-aband: #a05c4a;
     --lot: #7c5cff;
   }
   @media (prefers-color-scheme: dark) {
@@ -260,7 +261,11 @@
   .entry-foot { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
   .st-select { border: 1px solid var(--border); background: var(--panel-2); border-radius: 999px; padding: 3px 8px; font-size: 12px; font-weight: 600; }
   .st-todo { color: var(--st-todo); } .st-doing { color: var(--st-doing); } .st-pr { color: var(--st-pr); }
-  .st-done { color: var(--st-done); } .st-park { color: var(--st-park); }
+  .st-done { color: var(--st-done); } .st-park { color: var(--st-park); } .st-aband { color: var(--st-aband); }
+  /* Corbeille : bandeau d'en-tête de la sous-vue (compte + purge). */
+  .trash-bar { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; flex-wrap: wrap; }
+  .trash-bar .hint-sm { flex: 1; min-width: 220px; margin: 0; }
+  .trash-sec { font-size: 12px; font-weight: 700; color: var(--muted); margin: 14px 0 6px; }
   .date { color: var(--muted); font-size: 11.5px; }
   .entry-actions { margin-left: auto; display: flex; gap: 2px; }
 
@@ -639,6 +644,7 @@
       <div class="det-actions">
         <button class="btn sm" id="tkEditBtn">✎ Modifier</button>
         <button class="btn sm" id="tkDupBtn">⧉ Dupliquer</button>
+        <button class="btn sm" id="tkAbandonBtn">🚫 Abandonner</button>
         <button class="btn sm" id="tkArchBtn">🗄 Archiver</button>
         <button class="btn sm danger" id="tkDelBtn">🗑 Supprimer</button>
         <button class="ibtn" id="tkCloseBtn" title="Fermer">✕</button>
@@ -724,6 +730,7 @@
       <div class="det-actions">
         <button class="btn sm" id="lotEditBtn">✎ Modifier</button>
         <button class="btn sm" id="lotDupBtn">⧉ Dupliquer</button>
+        <button class="btn sm" id="lotAbandonBtn">🚫 Abandonner</button>
         <button class="btn sm" id="lotArchBtn">🗄 Archiver</button>
         <button class="btn sm danger" id="lotDelBtn">🗑 Supprimer</button>
         <button class="ibtn" id="lotCloseBtn" title="Fermer">✕</button>
@@ -759,11 +766,12 @@
           <button class="nav-tab lot" data-view="lotlist" title="Lots — liste">Lots <span class="nav-count" id="navCntLots"></span></button>
           <button class="nav-tab lot" data-view="plan" title="Lots — planning par étape de PR">Planning</button>
         </div>
-        <button class="nav-tab" id="navArchBtn" data-view="archent" title="Éléments archivés (réversible)">🗄 Archives <span class="nav-count" id="navCntArch"></span></button>
+        <button class="nav-tab" id="navArchBtn" data-view="archent" title="Éléments rangés — archivés ou supprimés. Tout y est réversible.">🗄 Archives <span class="nav-count" id="navCntArch"></span></button>
       </div>
       <div class="segmented arch-sub" id="archSub" style="display:none">
         <button data-view="archent" class="active">☰ Tickets</button>
         <button data-view="archlot">☰ Lots</button>
+        <button data-view="trash" title="Éléments supprimés — restaurables tant que la corbeille n'est pas vidée">🗑 Corbeille</button>
       </div>
     </div>
     <input class="ctrl search" id="qSearch" placeholder="Rechercher…">
@@ -889,7 +897,8 @@
     <p>Un lot regroupe des issues qui tiennent dans <b>une seule PR cohérente</b>. En pratique : <b>l’agent propose</b> le découpage (selon ce qui est faisable d’un coup), <b>tu valides</b>. Tu peux aussi créer un lot toi-même via ⚙ gérer.</p>
 
     <h4>6. Statuts &amp; mise à jour « auto »</h4>
-    <div class="flow"><b>À faire → En cours → En PR → Fait</b> (+ Parké)</div>
+    <div class="flow"><b>À faire → En cours → En PR → Fait</b> (+ Parké, Abandonné)</div>
+    <p><b>Parké</b> et <b>Abandonné</b> ne disent pas la même chose : <b>Parké</b> = on y reviendra, la condition de réouverture est écrite dans le ticket ; <b>Abandonné</b> = on ne le fera pas, il n’y a pas de condition. Les deux sortent de l’actionnable et restent lisibles. Le bouton <b>🚫 Abandonner</b> est dans le pop-up d’un ticket <i>et</i> dans celui d’un lot — un lot abandonné quitte le Planning, pas la Liste des lots.</p>
     <p>Claude Code et ChatGPT écrivent dans le <b>même</b> <span class="k">suivi.json</span> : au terme du code, l’IA renseigne <b>Codé avec</b> sur chaque ticket. Un ticket ne peut pas passer en <b>« Fait »</b> tant que cette attribution manque, mais l’avertissement du Planning est cliquable et ouvre la correction manuelle. Le passage en <b>« En PR »</b> signifie que le ticket attend TON merge, puis {{checkPhrase}}.</p>
 
     <h4>7. S’y retrouver / trier</h4>
@@ -897,6 +906,7 @@
       <li><b>4 vues</b> : Cartes, Liste, Kanban (glisse une carte d’une colonne à l’autre pour réaffecter la valeur de la colonne — statut par défaut), et <b>Planning</b>.</li>
       <li><b>Planning</b> : roadmap des lots. Chaque carte affiche les <b>IA utilisées</b> à partir de ses tickets. Les colonnes sont <b>déduites des PR GitHub</b> via <span class="k">sync-pr.ps1</span> : Planifié → En cours → En PR → {{stageMerged}} → {{stageDone}}. L’icône ⧉ copie le prompt à coller dans l’IA ; <b>« {{markBtn}} »</b> après {{checkPhrase}} passe le lot en {{stageDone}} et ses entrées en « Fait ».</li>
       <li><b>📌 Décisions</b> : chaque lot garde ses décisions validées (design, périmètre…) — Claude les note pendant les sessions, ou toi via <b>＋ décision</b> (au survol de la carte ; double-clic sur une décision pour la supprimer). Elles évitent de re-débattre un choix déjà tranché.</li>
+      <li><b>Ranger, abandonner, jeter</b> — trois gestes distincts. <b>🗄 Archiver</b> : c’est fini, je range (onglet <b>Archives</b>, réversible). <b>🚫 Abandonner</b> : on ne le fera pas, mais ça reste écrit. <b>🗑 Supprimer</b> : ça n’avait rien à faire là — l’élément part à la <b>Corbeille</b> (3<sup>e</sup> sous-onglet des Archives), d’où on le <b>restaure</b>. Rien n’est détruit tant que la corbeille n’est pas vidée, et c’est le seul endroit qui détruit pour de bon.</li>
       <li><b>Pastille de stats</b> (en haut) : PR mergées sur 7 jours · cycle moyen création→{{participle}} · {{noun}}s en attente. Un clic ouvre un pop-up avec les graphiques détaillés (statuts, priorités, étapes des lots, tendance des PR mergées).</li>
       <li><b>Filtres</b> : recherche, catégorie, type, lot, priorité, statut et <b>Codé avec</b>. Filtre « En PR » = tout ce qui attend ton merge.</li>
       <li><b>Grouper par</b> : statut, catégorie, type, priorité, lot ou <b>Codé avec</b> — pilote les en-têtes de groupe (Cartes &amp; Liste) et les colonnes du Kanban.</li>
@@ -1059,7 +1069,7 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.0";
+const PAGE_VERSION = "1.1";
 const PAGE_VERSION_DATE = "2026-09-10";
 
 /* Dérivés de la config (ne pas éditer) */
@@ -1077,8 +1087,13 @@ const SEED_CATEGORIES = PROJECT.seedCategories.slice();
 const SEED_TYPES = PROJECT.seedTypes.slice();
 const PRIOS   = ["P0","P1","P2","P3"];
 const PRIO_LABEL = { P0:"P0 · critique", P1:"P1 · important", P2:"P2 · utile", P3:"P3 · nice-to-have" };
-const STATS   = ["À faire","En cours","En PR","Fait","Parké"];
-const STAT_CLASS = { "À faire":"st-todo", "En cours":"st-doing", "En PR":"st-pr", "Fait":"st-done", "Parké":"st-park" };
+/* ATL-080 — « Abandonné » est le 6e statut, et il dit ce que « Parké » ne dit pas : Parké, c'est
+   « rien à y faire EN L'ÉTAT », la condition de réouverture est dans le ticket ; Abandonné, c'est
+   « on ne le fera pas », il n'y a pas de condition. Les deux sont de classe `hors` — aucun outil
+   du parc ne change de comportement, la distinction sert à la LECTURE humaine du suivi. */
+const STATS   = ["À faire","En cours","En PR","Fait","Parké","Abandonné"];
+const STAT_CLASS = { "À faire":"st-todo", "En cours":"st-doing", "En PR":"st-pr", "Fait":"st-done", "Parké":"st-park", "Abandonné":"st-aband" };
+const STAT_ABANDON = "Abandonné";              // le statut posé par le bouton 🚫, tickets et lots
 
 /* ---- Socle du suivi : le dictionnaire des statuts, DÉRIVÉ de la config ci-dessus (ATL-046) ----
    Les TICKETS parlent la même langue dans tous les dépôts — c'est STATS, et la page le code en
@@ -1087,13 +1102,14 @@ const STAT_CLASS = { "À faire":"st-todo", "En cours":"st-doing", "En PR":"st-pr
    planning des LOTS, et il vient de PROJECT.delivery : « Buildé SW », « Déployé », « Terminé ».
    Conséquence utile : un suivi.json neuf naît déclaré, et un ancien reçoit son bloc au premier
    enregistrement — sans que personne ait à l'écrire à la main. Contrat : SOCLE.md §2 et §4. */
-const CLASSE_ENTREE_REF = { "À faire":"ouvert", "En cours":"en-travail", "En PR":"en-travail", "Fait":"clos", "Parké":"hors" };
+const CLASSE_ENTREE_REF = { "À faire":"ouvert", "En cours":"en-travail", "En PR":"en-travail", "Fait":"clos", "Parké":"hors", "Abandonné":"hors" };
 const SOCLE_DEFAUT = (() => {
   const lot = { "Planifié":"ouvert", "En cours":"en-travail", "En PR":"en-travail", "Mergé":"en-travail", "Terminé":"clos" };
   if(S_MERGED) lot[S_MERGED] = "en-travail";   // colonne 4, relabellisée par le projet
   if(S_DONE)   lot[S_DONE]   = "clos";         // colonne 5, idem — c'est CE mot que la page écrit
+  lot[STAT_ABANDON] = "hors";                  // ATL-080 — premier statut de lot hors jeu : il quitte le Planning
   const ent = {}; STATS.forEach(s => ent[s] = CLASSE_ENTREE_REF[s] || "");
-  return { version:1, statutsEntree:ent, statutsLot:lot, extensions:[] };
+  return { version:2, statutsEntree:ent, statutsLot:lot, extensions:[] };
 })();
 /* Classe d'un statut de lot : le dialecte déclaré du dépôt d'abord, la table de référence
    ensuite. Un libellé que personne ne sait lire ne rend rien — le lot reste alors visible,
@@ -1170,9 +1186,18 @@ function normFilters(a){
 }
 
 const LS_KEY = NS("tracker_v1");
+/* ATL-080 — la corbeille est DEUX TABLEAUX À PART (`trash.entries`, `trash.lots`), pas un drapeau
+   sur chaque objet. Conséquence voulue : un élément à la corbeille n'est plus dans `state.entries`
+   ni dans `state.lots`, donc TOUT le reste de la page — les quinze filtres `!e.archived`, les
+   comptes, le Planning, la fusion 3 voies — se comporte exactement comme avant, sans qu'un seul
+   filtre ait à être retouché ni risque d'être oublié. Et les outils du parc (generate-suivi.ps1,
+   tableau-de-bord.js…) ignorent une clé de tête qu'ils ne lisent pas : rien à propager de ce
+   côté-là. Chaque élément y garde tous ses champs, plus `deleted` (horodatage ISO, comme
+   `archived` — jamais un booléen, SOCLE.md §1). */
+function emptyTrash(){ return { entries: [], lots: [] }; }
 let state = { nextId: 1, entries: [], categories: SEED_CATEGORIES.slice(), types: SEED_TYPES.slice(), lots: [],
               defaults: { categories: SEED_CATEGORIES[0], types: SEED_TYPES[0] },
-              socle: SOCLE_DEFAUT };
+              trash: emptyTrash(), socle: SOCLE_DEFAUT };
 let pending = [];        // captures de l'entrée en cours : {name, dataUrl}
 let hiddenCols = (()=>{ try { return JSON.parse(localStorage.getItem(NS("hiddencols"))||"{}") || {}; } catch(e){ return {}; } })();  // colonnes masquées par axe
 /* Filtres SÉPARÉS par famille de vues (comme Notion : chaque vue a ses filtres) :
@@ -1203,7 +1228,12 @@ function markSynced(m){
 }
 let dirty = false;       // vrai entre une modif locale et sa sauvegarde
 let view = "card";
-let lastArchSubView = localStorage.getItem(NS("archSubView")) || "archent";   // Tickets/Lots mémorisé dans l'onglet Archives
+/* Les trois sous-vues de l'onglet Archives : tickets archivés, lots archivés, corbeille (ATL-080).
+   Un seul prédicat pour les quatre endroits qui demandaient « est-on dans les Archives ? » — la
+   sous-vue Corbeille en ajoutait un cinquième oubli possible à chaque fois. */
+const ARCH_VIEWS = ["archent","archlot","trash"];
+const isArchView = v => ARCH_VIEWS.includes(v);
+let lastArchSubView = (()=>{ const v=localStorage.getItem(NS("archSubView")); return isArchView(v) ? v : "archent"; })();   // sous-vue mémorisée dans l'onglet Archives
 let sortKey = localStorage.getItem(NS("sort")) || "prio";   // tri de la vue Cartes (pilule dans le bandeau)
 let cardCols = 0;       // 0 = auto ; 1/2/3 = nombre de colonnes forcé en vue Cartes
 let dragCtx = null;      // { listKey } pendant un réordonnancement dans « gérer »
@@ -1558,7 +1588,9 @@ async function fileMtime(name){
 async function hydrateCaptures(data){
   let sub = null;
   try { sub = await dirHandle.getDirectoryHandle("suivi-captures"); } catch(e){ return; }
-  for(const e of (data.entries||[])){
+  // La corbeille est hydratée comme le reste : un ticket restauré retrouve ses vignettes (ATL-080).
+  const tousLesTickets = (data.entries||[]).concat((data.trash && data.trash.entries) || []);
+  for(const e of tousLesTickets){
     for(const c of (e.captures||[])){
       if(c.dataUrl || !c.file) continue;
       try {
@@ -1589,6 +1621,24 @@ function formBusy(){
   return editingId!==null || pending.length>0 ||
          $("#fTitle").value.trim()!=="" || $("#fDesc").value.trim()!=="";
 }
+/* ATL-087 — garde-fou de fermeture d'onglet.
+   La page protégeait déjà la saisie en cours contre TOUT le reste — un rechargement demandé par
+   Claude attend (`checkExternalChange` lit `formBusy`), fermer un pop-up demande confirmation
+   (`okToDropTicket` / `okToDropLot`, ATL-051) — mais pas contre le geste le plus banal : fermer
+   l'onglet. Un ticket à moitié écrit n'est nulle part ailleurs : ni sur le disque, ni dans le
+   `localStorage`, qui ne reçoit que l'état enregistré. Il n'y avait donc rien à récupérer.
+   `dirty` est dans la liste pour la fenêtre de 400 ms de `scheduleSave` — courte, mais c'est
+   exactement pendant elle qu'on ferme après une dernière modification.
+   Le navigateur impose son propre libellé : le texte rendu ici n'est pas affiché, seule compte
+   la présence d'une valeur de retour. */
+function travailNonEnregistre(){
+  try { return dirty || formBusy() || tkDirty() || lotDirty() || manageBusy(); }
+  catch(e){ return false; }   // page pas encore montée : ne jamais bloquer sur une erreur de garde
+}
+window.addEventListener("beforeunload", ev=>{
+  if(!travailNonEnregistre()) return;
+  ev.preventDefault(); ev.returnValue = "";
+});
 async function checkExternalChange(){
   if(!dirHandle || !dirReady || dirty || document.hidden) return;
   const m = await fileMtime("suivi.json");
@@ -1607,17 +1657,22 @@ async function writeFile(name, content, dir){
   const fh = await target.getFileHandle(name, { create:true });
   const w = await fh.createWritable(); await w.write(content); await w.close();
 }
+/* ATL-080 — les entrées à la corbeille comptent ici comme les vivantes, pour deux raisons de fond :
+   leurs PNG ne doivent pas être balayés comme orphelins (sinon restaurer rendrait un ticket sans
+   ses captures), et leurs captures doivent devenir des RÉFÉRENCES dans le json — sans ça, un
+   dataUrl base64 entier partait dans `suivi.json` à chaque enregistrement. */
+function entriesWithTrash(){ return state.entries.concat((state.trash&&state.trash.entries)||[]); }
 async function writeCaptures(){
   if(!dirHandle) return {};
   const sub = await dirHandle.getDirectoryHandle("suivi-captures", { create:true });
   const map = {};
-  for(const e of state.entries){
+  for(const e of entriesWithTrash()){
     const rels = [];
     (e.captures||[]).forEach((c,i)=>{ const fname=`${idStr(e)}-${i+1}.png`; c.__fname=fname; rels.push("suivi-captures/"+fname); });
     map[e.n] = rels;
   }
   const keep = new Set();
-  for(const e of state.entries){
+  for(const e of entriesWithTrash()){
     for(const c of (e.captures||[])){ if(!c.__fname) continue;
       keep.add(c.__fname);
       if(!c.dataUrl) continue; // vignette non chargée : le PNG existe déjà sur disque, ne pas l'écraser
@@ -1634,10 +1689,12 @@ async function writeCaptures(){
 /* Version fichier du json : les captures deviennent des références vers les PNG (léger, lisible par Claude) */
 function jsonForFile(capMap){
   const clone = JSON.parse(JSON.stringify(state));
-  clone.entries.forEach(e=>{
+  const refCaptures = e => {
     const rels = capMap[e.n] || [];
     e.captures = (e.captures||[]).map((c,i)=>({ name:c.name, file:rels[i] })).filter(c=>c.file);
-  });
+  };
+  clone.entries.forEach(refCaptures);
+  if(clone.trash && Array.isArray(clone.trash.entries)) clone.trash.entries.forEach(refCaptures);
   return JSON.stringify(clone, null, 2);
 }
 function dataUrlToBlob(dataUrl){
@@ -1695,6 +1752,18 @@ function mergeExternal(disk){
     const added=dk.filter(v=>!bk.includes(v) && !(state[k]||[]).includes(v));
     if(added.length) state[k]=(state[k]||[]).concat(added);
   });
+  /* ATL-080 — la corbeille se fusionne comme les deux autres listes, et ce n'est pas un ajout
+     décoratif : supprimer et restaurer sont des DÉPLACEMENTS entre `entries` et `trash.entries`.
+     La fusion voit donc, du même mouvement, « retiré ici » d'un côté et « ajouté ici » de l'autre,
+     et les deux réponses concordent. Reste un cas de bord : restauré localement pendant que le
+     disque a modifié la copie encore à la corbeille — la règle de sécurité garderait les deux.
+     La vie l'emporte alors sur la corbeille, sinon l'élément apparaîtrait en double. */
+  const bTrash = bas.trash || {}, dTrash = disk.trash || {};
+  state.trash.entries = mergeList(state.trash.entries, bTrash.entries, dTrash.entries, x=>x.n);
+  state.trash.lots    = mergeList(state.trash.lots,    bTrash.lots,    dTrash.lots,    x=>x.id);
+  const vivants=new Set(state.entries.map(x=>x.n)), vivantsL=new Set(state.lots.map(x=>x.id));
+  state.trash.entries = state.trash.entries.filter(x=>!vivants.has(x.n));
+  state.trash.lots    = state.trash.lots.filter(x=>!vivantsL.has(x.id));
   if(JSON.stringify(state.defaults)===JSON.stringify(bas.defaults) && disk.defaults) state.defaults=disk.defaults;
   /* ATL-044 — le bloc `socle` (le contrat de données du dépôt : classes de statut, extensions)
      s'écrit À LA MAIN dans suivi.json et JAMAIS par cette page. Le disque a donc toujours
@@ -1937,6 +2006,7 @@ function openTicketDetail(n, opts={}){
   $("#ticketBox").dataset.mode="view"; $("#ticketBox").classList.remove("editing");
   $("#tkId").textContent=idStr(e); $("#tkTitle").textContent=e.title||"(sans titre)";
   $("#tkArchBtn").textContent = e.archived ? "↩ Désarchiver" : "🗄 Archiver";
+  syncAbandonBtn("#tkAbandonBtn", e.stat, "ce ticket");
   buildTicketRead(e);
   $("#lotModal").classList.remove("show"); $("#ticketModal").classList.add("show");
 }
@@ -1983,6 +2053,7 @@ function openLotDetail(id, opts={}){
   $("#lotBox").dataset.mode="view"; $("#lotBox").classList.remove("editing");
   setLotIdChip(l); $("#lotTitle").textContent=l.name||"(sans nom)";
   $("#lotArchBtn").textContent = l.archived ? "↩ Désarchiver" : "🗄 Archiver";
+  syncAbandonBtn("#lotAbandonBtn", l.status, "ce lot");
   buildLotRead(l);
   $("#leName").value=l.name||""; $("#leGoal").value=l.goal||""; $("#leBranch").value=l.branch||""; $("#lePr").value=l.pr||""; $("#leOrder").value=(l.order!=null?l.order:"");
   $("#ticketModal").classList.remove("show"); $("#lotModal").classList.add("show");
@@ -2030,14 +2101,22 @@ function submitForm(){
     navType="ticket"; navKey=savedN;
     const e=state.entries.find(x=>x.n===savedN);
     $("#ticketBox").classList.remove("editing"); $("#ticketBox").dataset.mode="view";
-    if(e){ $("#tkId").textContent=idStr(e); $("#tkTitle").textContent=e.title||"(sans titre)"; $("#tkArchBtn").textContent=e.archived?"↩ Désarchiver":"🗄 Archiver"; buildTicketRead(e); }
+    if(e){ $("#tkId").textContent=idStr(e); $("#tkTitle").textContent=e.title||"(sans titre)"; $("#tkArchBtn").textContent=e.archived?"↩ Désarchiver":"🗄 Archiver"; syncAbandonBtn("#tkAbandonBtn", e.stat, "ce ticket"); buildTicketRead(e); }
   }
 }
+/* ATL-080 — « Supprimer » range à la corbeille au lieu de détruire.
+   Le `confirm()` d'avant est retiré exprès : il était le SEUL filet, et il ne servait à rien —
+   la page réenregistre `suivi.json` 400 ms plus tard (scheduleSave) et la fusion 3 voies
+   « respecte la suppression », donc un OK de trop était définitif sur le disque. Le seul recours
+   restant était git, et le `.claude` de Sable est gitignore (ATL-050) : là, rien du tout.
+   Un geste réversible n'a pas besoin d'être barré ; c'est la purge, elle, qui demande à confirmer. */
 function delEntry(id){
-  const e=state.entries.find(x=>x.n===id);
-  if(!confirm(`Supprimer ${idStr(e)} — « ${e.title} » ?`)) return;
+  const e=state.entries.find(x=>x.n===id); if(!e) return;
+  e.deleted=todayISO();
   state.entries=state.entries.filter(x=>x.n!==id);
+  state.trash.entries.unshift(e);
   rebuildDynamicSelects(); if(editingId===id) resetForm(); render(); scheduleSave();
+  toast("🗑 À la corbeille → "+idStr(e)+" · Archives ▸ Corbeille pour le restaurer.");
 }
 function setStatus(id,val){
   const e=state.entries.find(x=>x.n===id);
@@ -2077,6 +2156,38 @@ function setEntryField(id, key, val){
   if(!e || !f || e[f]===val) return;
   if(f==="stat" && val==="Fait" && !ensureCoderAttribution([e])) return;
   e[f]=val; e.updated=todayISO(); render(); scheduleSave();
+}
+
+/* ---------- Abandon (ATL-080) : « finalement, on ne le fera pas » ----------
+   Trois gestes voisins, trois sens qui ne se recouvrent pas — c'est ce que la question d'ATL-080
+   demandait de rendre lisible :
+     · Parké      — on y reviendra, la condition de réouverture est dans le ticket ;
+     · Abandonné  — on ne le fera pas, il n'y a pas de condition ;
+     · Supprimé   — ça n'avait rien à faire là (corbeille).
+   Un abandon ne se supprime pas : le ticket a existé, et la décision de ne pas le faire est une
+   information du suivi, pas un déchet. Reprendre rend le premier statut ouvert de l'échelle —
+   « À faire » / « Planifié » ; le statut d'avant l'abandon n'est pas mémorisé, ce serait un champ
+   de plus pour une reprise qui, en pratique, repart de zéro. */
+function syncAbandonBtn(sel, statut, quoi){
+  const b=$(sel); if(!b) return;
+  const off = statut===STAT_ABANDON;
+  b.textContent = off ? "↩ Reprendre" : "🚫 Abandonner";
+  b.title = off ? "Remet "+quoi+" dans le suivi actif" : "Marque "+quoi+" « Abandonné » — il reste lisible, hors de l'actionnable";
+  b.classList.toggle("danger", false);
+}
+function abandonEntry(id){
+  const e=state.entries.find(x=>x.n===id); if(!e) return;
+  const reprise = e.stat===STAT_ABANDON;
+  e.stat = reprise ? STATS[0] : STAT_ABANDON;
+  e.updated=todayISO(); render(); scheduleSave();
+  toast(reprise ? `↩ Repris → ${idStr(e)} · statut « ${STATS[0]} »` : "🚫 Abandonné → "+idStr(e));
+}
+function abandonLot(id){
+  const l=state.lots.find(x=>x.id===id); if(!l) return;
+  const reprise = classeLot(l.status)==="hors";
+  l.status = reprise ? LOT_STAGES[0] : STAT_ABANDON;
+  render(); scheduleSave();
+  toast(reprise ? `↩ Repris → lot « ${l.name} » · étape « ${LOT_STAGES[0]} »` : `🚫 Abandonné → lot « ${l.name} » · il quitte le Planning, pas la Liste des lots.`);
 }
 
 /* ---------- Archivage ---------- */
@@ -2187,8 +2298,66 @@ function confirmUnarchiveLot(){
   toast(n? `Lot désarchivé → ${l.name} (+${n} ticket${n>1?"s":""})` : "Lot désarchivé → "+l.name);
 }
 function archivedLots(){ return state.lots.filter(l=>l.archived).sort((a,b)=>(b.archived||"").localeCompare(a.archived||"")||(a.order||999)-(b.order||999)); }
+
+/* ---------- Corbeille (ATL-080) : restaurer, purger ----------
+   Archiver et supprimer ne disent pas la même chose et ne se rangent donc pas au même endroit :
+   🗄 Archiver = « c'est fini, je range » (l'élément reste dans state, il a juste une date
+   d'archivage) ; 🗑 Supprimer = « ça n'a rien à faire là » (l'élément sort de state pour la
+   corbeille). La corbeille est la 3e sous-vue de l'onglet Archives, et elle est la SEULE porte
+   vers la destruction définitive. */
+function trashedEntries(){ return state.trash.entries.slice().sort((a,b)=>(b.deleted||"").localeCompare(a.deleted||"")||b.n-a.n); }
+function trashedLots(){ return state.trash.lots.slice().sort((a,b)=>(b.deleted||"").localeCompare(a.deleted||"")||(a.order||999)-(b.order||999)); }
+function trashCount(){ return state.trash.entries.length + state.trash.lots.length; }
+function restoreEntry(n){
+  const i=state.trash.entries.findIndex(x=>x.n===n); if(i<0) return;
+  const e=state.trash.entries.splice(i,1)[0];
+  delete e.deleted;
+  // Son lot a pu partir (ou être purgé) entre-temps : un ticket qui pointe sur un lot absent
+  // afficherait une étiquette vide. Mieux vaut le rendre sans lot que faussement rattaché.
+  const lotPerdu = e.lot && !state.lots.some(l=>l.id===e.lot);
+  if(lotPerdu) e.lot="";
+  e.updated=todayISO();
+  const at=state.entries.findIndex(x=>x.n>e.n);
+  if(at<0) state.entries.push(e); else state.entries.splice(at,0,e);
+  state.nextId=Math.max(state.nextId||1, e.n+1);
+  rebuildDynamicSelects(); render(); scheduleSave();
+  toast("↩ Restauré → "+idStr(e)+(lotPerdu?" · son lot n'existe plus, il revient sans lot.":""));
+}
+function restoreLot(id){
+  const i=state.trash.lots.findIndex(x=>x.id===id); if(i<0) return;
+  const l=state.trash.lots.splice(i,1)[0];
+  const tix=Array.isArray(l.deletedTickets)?l.deletedTickets:[];
+  delete l.deleted; delete l.deletedTickets;
+  // Un lot créé depuis a pu prendre l'identifiant : `lotIdFromName` en rend un libre.
+  const repris = state.lots.some(x=>x.id===l.id);
+  if(repris) l.id=lotIdFromName(l.name);
+  state.lots.push(l);
+  let n=0;
+  tix.forEach(num=>{ const e=state.entries.find(x=>x.n===num); if(e && !e.lot){ e.lot=l.id; e.updated=todayISO(); n++; } });
+  rebuildManageLists(); rebuildDynamicSelects(); render(); scheduleSave();
+  toast(`↩ Restauré → lot « ${l.name} »` + (n?` · ${n} ticket(s) rattaché(s)`:"") + (repris?` · identifiant repris ailleurs, il devient ${l.id}`:""));
+}
+function purgeEntry(n){
+  const e=state.trash.entries.find(x=>x.n===n); if(!e) return;
+  if(!confirm(`Supprimer DÉFINITIVEMENT ${idStr(e)} — « ${e.title||"sans titre"} » ?\n\nCette fois c'est sans retour : ni la corbeille ni la page ne le retrouveront.`)) return;
+  state.trash.entries=state.trash.entries.filter(x=>x.n!==n);
+  render(); scheduleSave(); toast("Supprimé définitivement → "+idStr(e));
+}
+function purgeLot(id){
+  const l=state.trash.lots.find(x=>x.id===id); if(!l) return;
+  if(!confirm(`Supprimer DÉFINITIVEMENT le lot « ${l.name} » ?\n\nCette fois c'est sans retour. Les tickets qu'il portait ne sont pas touchés — ils sont déjà sans lot.`)) return;
+  state.trash.lots=state.trash.lots.filter(x=>x.id!==id);
+  render(); scheduleSave(); toast("Supprimé définitivement → lot « "+l.name+" »");
+}
+function emptyTrashNow(){
+  const n=trashCount(); if(!n) return;
+  if(!confirm(`Vider la corbeille — ${n} élément(s) ?\n\nCette fois c'est sans retour.`)) return;
+  state.trash=emptyTrash();
+  render(); scheduleSave(); toast(`Corbeille vidée — ${n} élément(s) supprimé(s) définitivement.`);
+}
 /* ---------- Vues Archives (tickets / lots archivés — tableaux triables) ---------- */
-let archSort = { ent:null, lot:null };   // tri courant par sous-vue Archives
+let archSort = { ent:null, lot:null, trashent:null, trashlot:null };   // tri courant par tableau (Archives et Corbeille)
+const ARCH_LIST_KEY = { ent:"archent", lot:"archlot", trashent:"trashent", trashlot:"trashlot" };
 const ARCH_ENT_COLS = [
   { key:"id",   label:"ID",         get:e=>e.n },
   { key:"title",label:"Titre",      get:e=>(e.title||"").toLowerCase() },
@@ -2205,6 +2374,23 @@ const ARCH_LOT_COLS = [
   { key:"tix",  label:"Tickets",    get:l=>lotEntries(l).length },
   { key:"pr",   label:"PR",         get:l=>l.pr||0 },
   { key:"arch", label:"Archivé le", get:l=>l.archived||"" },
+  { key:"act",  label:"", fixed:true },
+];
+const TRASH_ENT_COLS = [
+  { key:"id",   label:"ID",           get:e=>e.n },
+  { key:"title",label:"Titre",        get:e=>(e.title||"").toLowerCase() },
+  { key:"dom",  label:"Catégorie",    get:e=>(e.dom||"").toLowerCase() },
+  { key:"lot",  label:"Lot",          get:e=>lotName(e.lot).toLowerCase() },
+  { key:"prio", label:"Prio",         get:e=>prioRank(e.prio) },
+  { key:"del",  label:"Supprimé le",  get:e=>e.deleted||"" },
+  { key:"act",  label:"", fixed:true },
+];
+const TRASH_LOT_COLS = [
+  { key:"num",  label:"#",            get:l=>l.order||999 },
+  { key:"name", label:"Lot",          get:l=>(l.name||"").toLowerCase() },
+  { key:"stage",label:"Étape",        get:l=>LOT_STAGES.indexOf(lotStage(l)) },
+  { key:"tix",  label:"Tickets",      get:l=>(l.deletedTickets||[]).length },
+  { key:"del",  label:"Supprimé le",  get:l=>l.deleted||"" },
   { key:"act",  label:"", fixed:true },
 ];
 /* ---------- En-tête de colonne interactif, partagé par toutes les listes (PS-042/047) ----------
@@ -2293,7 +2479,7 @@ function archSortRows(rows, cols, st){
   });
 }
 function archTable(cols, rows, which, rowFn){
-  const listKey = which==="ent" ? "archent" : "archlot";   // resize possible (PS-047), pas de réordonnancement (corps en ordre fixe)
+  const listKey = ARCH_LIST_KEY[which] || "archent";   // resize possible (PS-047), pas de réordonnancement (corps en ordre fixe)
   const t=el("table","tbl"); applyColWidths(listKey, t);
   const st=archSort[which];
   const thead=el("thead"), trh=el("tr");
@@ -2342,6 +2528,67 @@ function renderArchLots(c){
     tr.append(cO,cN,cS,cT,cP,cAr,cAc);
     return tr;
   }));
+}
+
+/* ---------- Vue Corbeille (ATL-080) : tickets et lots supprimés, dans un seul écran ----------
+   Deux tableaux empilés plutôt que deux sous-onglets de plus : la corbeille se lit d'un coup
+   d'œil (« qu'est-ce que j'ai jeté ? »), et elle est censée être vide la plupart du temps. */
+function renderTrash(c){
+  const q=(currentFilter().q||"").trim();
+  const ents=trashedEntries().filter(e=>archSearchMatch(q, idStr(e), e.title, e.dom));
+  const lots=trashedLots().filter(l=>archSearchMatch(q, l.name, l.goal));
+  const bar=el("div","trash-bar");
+  const hint=el("div","hint-sm");
+  hint.innerHTML = trashCount()
+    ? `Supprimer range ici — rien n'est perdu tant que la corbeille n'est pas vidée. <b>Restaurer</b> remet l'élément dans le suivi ; la corbeille est le seul endroit d'où l'on supprime définitivement.`
+    : `Supprimer range ici plutôt que de détruire. Un élément à la corbeille sort du suivi et de tous les comptes, mais reste restaurable.`;
+  bar.appendChild(hint);
+  if(trashCount()){
+    const vider=el("button","btn sm danger"); vider.textContent=`🗑 Vider la corbeille (${trashCount()})`;
+    vider.title="Supprime définitivement tout ce que contient la corbeille";
+    vider.onclick=emptyTrashNow; bar.appendChild(vider);
+  }
+  c.appendChild(bar);
+  if(!ents.length && !lots.length){
+    const n=el("div","no-res");
+    n.textContent = q ? "Rien dans la corbeille ne correspond à la recherche."
+                      : "Corbeille vide. Supprime un ticket ou un lot pour le ranger ici — il restera restaurable.";
+    c.appendChild(n); return;
+  }
+  if(ents.length){
+    const t=el("div","trash-sec"); t.textContent=`Tickets supprimés (${ents.length})`; c.appendChild(t);
+    c.appendChild(archTable(TRASH_ENT_COLS, ents, "trashent", e=>{
+      const tr=el("tr","done");
+      const cId=el("td","c-id"); cId.innerHTML=`<span class="id">${idStr(e)}</span>`;
+      const cTi=el("td","t-title"); cTi.textContent=e.title||"(sans titre)";
+      const cCa=el("td"); cCa.textContent=e.dom||"—";
+      const cLo=el("td"); cLo.innerHTML=e.lot?`<span class="badge lot">◧ ${esc(lotName(e.lot)||e.lot)}</span>`:'<span class="cam">—</span>';
+      const cPr=el("td"); cPr.innerHTML=`<span class="badge prio ${e.prio}">${e.prio}</span>`;
+      const cDe=el("td","cam"); cDe.textContent=fmtDate(e.deleted);
+      const cAc=el("td"); cAc.style.whiteSpace="nowrap";
+      const un=el("button","btn sm"); un.textContent="↩ Restaurer"; un.onclick=()=>restoreEntry(e.n);
+      cAc.append(un, iconBtn("trash","danger","Supprimer définitivement",()=>purgeEntry(e.n)));
+      tr.append(cId,cTi,cCa,cLo,cPr,cDe,cAc);
+      return tr;
+    }));
+  }
+  if(lots.length){
+    const t=el("div","trash-sec"); t.textContent=`Lots supprimés (${lots.length})`; c.appendChild(t);
+    c.appendChild(archTable(TRASH_LOT_COLS, lots, "trashlot", l=>{
+      const stage=lotStage(l), tix=l.deletedTickets||[];
+      const tr=el("tr","lotrow done");
+      const cO=el("td","t-num"); cO.textContent=l.order||"—";
+      const cN=el("td","t-lotname"); cN.textContent=l.name; cN.title=l.id||"";
+      const cS=el("td"); cS.innerHTML=`<span class="lstage" style="color:${LOT_STAGE_COLOR[stage]||'var(--muted)'}">${esc(stage)}</span>`;
+      const cT=el("td","t-tix"); cT.textContent = tix.length ? `${tix.length} · rattachés à la restauration` : "—";
+      const cDe=el("td","cam"); cDe.textContent=fmtDate(l.deleted);
+      const cAc=el("td","t-act"); cAc.style.whiteSpace="nowrap";
+      const un=el("button","btn sm"); un.textContent="↩ Restaurer"; un.onclick=()=>restoreLot(l.id);
+      cAc.append(un, iconBtn("trash","danger","Supprimer définitivement",()=>purgeLot(l.id)));
+      tr.append(cO,cN,cS,cT,cDe,cAc);
+      return tr;
+    }));
+  }
 }
 
 /* ---------- Colonnes affichées (choisir quelles colonnes/groupes sont visibles) ---------- */
@@ -2407,7 +2654,7 @@ function renderTableColsMgr(){
 function syncFilters(){
   const v=view;
   const roadmap = (v==="plan" || v==="lotlist");   // vues « lots » : les filtres lot/statut n'ont pas de sens
-  const archive = (v==="archent" || v==="archlot"); // vues Archives : ni groupement ni menu d'affichage
+  const archive = isArchView(v);                  // vues Archives + Corbeille : ni groupement ni menu d'affichage
   const set=(id,on)=>{ const el=$("#"+id); if(el) el.style.display = on?"":"none"; };
   set("wrapDisplay", !archive && v!=="plan");     // menu Affichage : tickets + Liste des lots (PS-043) ; le Planning a le sien
   set("wrapPlanDisplay", v==="plan"); // menu Affichage (Planning) : uniquement en Planning
@@ -2551,12 +2798,18 @@ function addLot(name){
   state.lots.push(lot); if(name===undefined) $("#lotNew").value="";
   rebuildManageLists(); rebuildDynamicSelects(); scheduleSave(); return lot;
 }
+/* Un lot à la corbeille détache ses tickets (ils restent, sans lot) — mais il EMPORTE la liste de
+   ceux qu'il portait, dans `deletedTickets`. Sans elle, restaurer un lot rendait une coquille :
+   le lot revenait vide et le rattachement était à refaire ticket par ticket, de mémoire. */
 function deleteLot(i){
-  const lot=state.lots[i];
-  const used=state.entries.filter(e=>e.lot===lot.id).length;
-  if(used>0 && !confirm(`${used} issue(s) sont dans « ${lot.name} ». Les remettre sans lot et supprimer le lot ?`)) return;
+  const lot=state.lots[i]; if(!lot) return;
+  lot.deletedTickets=state.entries.filter(e=>e.lot===lot.id).map(e=>e.n);
+  lot.deleted=todayISO();
   state.entries.forEach(e=>{ if(e.lot===lot.id) e.lot=""; });
-  state.lots.splice(i,1); rebuildManageLists(); rebuildDynamicSelects(); render(); scheduleSave();
+  state.lots.splice(i,1);
+  state.trash.lots.unshift(lot);
+  rebuildManageLists(); rebuildDynamicSelects(); render(); scheduleSave();
+  toast("🗑 À la corbeille → lot « "+lot.name+" »"+(lot.deletedTickets.length?` · ${lot.deletedTickets.length} ticket(s) détaché(s), rattachés à la restauration.`:""));
 }
 
 /* ---------- Filtre + tri ---------- */
@@ -2632,7 +2885,7 @@ function makeFilterPill(f, i){
 function renderFilterChips(){
   const box=$("#filterChips"); if(!box) return;
   box.innerHTML="";
-  if(view==="archent" || view==="archlot"){   // Archives : seule la recherche s'applique (tri par colonnes)
+  if(isArchView(view)){                       // Archives et Corbeille : seule la recherche s'applique (tri par colonnes)
     const q=$("#qSearch").value.trim();
     if(q) box.appendChild(makeSearchChip(q));
     box.style.display = q ? "" : "none";
@@ -2753,15 +3006,18 @@ function render(){
   const rows=filteredRows(f);
   const c=$("#view"); c.className="as-"+view; c.innerHTML="";
 
-  if(state.entries.length===0){ $("#empty").classList.remove("hidden"); c.classList.add("hidden"); }
+  // ATL-080 — l'écran « aucune entrée » ne doit JAMAIS masquer les Archives ni la Corbeille :
+  // sinon, supprimer le dernier ticket enfermait la seule porte pour le restaurer.
+  const archiveView = isArchView(view);
+  if(state.entries.length===0 && !archiveView){ $("#empty").classList.remove("hidden"); c.classList.add("hidden"); }
   else { $("#empty").classList.add("hidden"); c.classList.remove("hidden"); }
 
-  const archiveView = (view==="archent" || view==="archlot");
-  if(state.entries.length){
+  if(state.entries.length || archiveView){
     if(view==="plan") renderPlanning(c);
     else if(view==="lotlist") renderLotList(c);
     else if(view==="archent") renderArchEntries(c);
     else if(view==="archlot") renderArchLots(c);
+    else if(view==="trash") renderTrash(c);
     else if(view==="kanban") renderKanban(c, rows);
     else if(view==="table") renderTable(c, sortRows(rows,f));
     else renderCards(c, rows, f);
@@ -2777,6 +3033,9 @@ function render(){
   } else if(view==="archlot"){
     const n=archivedLots().length;
     $("#countPill").textContent=`${n} lot${n>1?"s":""} archivé${n>1?"s":""}`;
+  } else if(view==="trash"){
+    const n=trashCount();
+    $("#countPill").textContent = n ? `${n} élément${n>1?"s":""} à la corbeille` : "corbeille vide";
   } else {
     const total=state.entries.filter(e=>!e.archived).length;
     $("#countPill").textContent=`${rows.length} / ${total} entrée${total>1?"s":""}`;
@@ -2791,7 +3050,7 @@ function updateNavCounts(){
   const set=(id,n)=>{ const s=$("#"+id); if(s) s.textContent=n; };
   set("navCntTix",  state.entries.filter(e=>!e.archived).length);
   set("navCntLots", state.lots.filter(l=>!l.archived).length);
-  set("navCntArch", archivedEntries().length + archivedLots().length);
+  set("navCntArch", archivedEntries().length + archivedLots().length + trashCount());
 }
 
 function groupHead(g, count){
@@ -3003,7 +3262,7 @@ function esc(s){ return (s||"").replace(/[&<>]/g, m=>({'&':'&amp;','<':'&lt;','>
    Seul Planifié ↔ En cours est manuel (drag-drop ou champ status). */
 const LOT_STAGES = ["Planifié","En cours","En PR",S_MERGED,S_DONE];
 const LOT_STAGE_COLOR = { "Planifié":"var(--st-todo)", "En cours":"var(--st-doing)", "En PR":"var(--st-pr)",
-                          [S_MERGED]:"var(--p1)", [S_DONE]:"var(--st-done)" };
+                          [S_MERGED]:"var(--p1)", [S_DONE]:"var(--st-done)", [STAT_ABANDON]:"var(--st-aband)" };
 /* Difficulté estimée du lot (indicative — ajustable). Ordre = tri croissant. */
 const DIFF_ORDER = ["Facile","Moyen","Difficile"];
 const DIFF_META = {
@@ -3023,6 +3282,12 @@ function diffBadgeHtml(l){
    premier ; `builtSw` et `prState` ne servent plus qu'à préciser une étape non déclarée. */
 function lotStage(l){
   const cls = classeLot(l.status);
+  /* ATL-080 — un lot de classe `hors` n'est à aucune étape : il rend son propre libellé, qui
+     n'est pas dans LOT_STAGES. Les colonnes du Planning étant construites EN PARCOURANT
+     LOT_STAGES, il en sort de lui-même — sans qu'un filtre ait à le retirer quelque part, donc
+     sans l'oubli qui accompagne les filtres. Il reste dans la Liste des lots, avec son étiquette :
+     abandonner un lot ne l'efface pas, ça le dit. */
+  if(cls==="hors") return l.status || STAT_ABANDON;
   if(cls==="clos") return S_DONE;
   if(l.builtSw) return S_DONE;
   if(l.status===S_MERGED || l.status==="Mergé") return S_MERGED;
@@ -3528,7 +3793,7 @@ function openStats(){
 
 /* ---------- Vue : sélecteur ---------- */
 function updateNav(){
-  const archive = (view==="archent" || view==="archlot");
+  const archive = isArchView(view);
   document.querySelectorAll("#viewSwitch .nav-tab").forEach(b=>{
     const dv=b.dataset.view;
     b.classList.toggle("active", dv===view || (dv==="archent" && archive));
@@ -3539,7 +3804,7 @@ function updateNav(){
 }
 function setView(v){
   view=v; lsSet(NS("view"), v); closeFilterPop();
-  if(v==="archent" || v==="archlot"){ lastArchSubView=v; lsSet(NS("archSubView"), v); }
+  if(isArchView(v)){ lastArchSubView=v; lsSet(NS("archSubView"), v); }
   filters=filtersByScope[scopeOf(v)];   // chaque famille de vues a ses propres filtres
   updateNav();
   if(v==="table" && !tableSort) tableSort = { key:"prio", dir:1 };
@@ -3580,13 +3845,18 @@ function updateStorageUI(){
 
 /* ---------- Migration / adoption ---------- */
 function adoptState(d){
-  state = Object.assign({ nextId:1, entries:[], categories:SEED_CATEGORIES.slice(), types:SEED_TYPES.slice(), lots:[], defaults:{}, socle:SOCLE_DEFAUT }, d);
+  state = Object.assign({ nextId:1, entries:[], categories:SEED_CATEGORIES.slice(), types:SEED_TYPES.slice(), lots:[], defaults:{}, trash:emptyTrash(), socle:SOCLE_DEFAUT }, d);
   // Un fichier antérieur au socle (SOCLE.md §4) le reçoit ici, dérivé de la config du projet :
   // il est donc déclaré dès le premier enregistrement, sans saisie à la main.
   if(!state.socle || typeof state.socle!=="object") state.socle = SOCLE_DEFAUT;
   if(!Array.isArray(state.categories) || !state.categories.length) state.categories = SEED_CATEGORIES.slice();
   if(!Array.isArray(state.types) || !state.types.length) state.types = SEED_TYPES.slice();
   if(!Array.isArray(state.lots)) state.lots = [];
+  // Corbeille (ATL-080) : un fichier antérieur n'a pas la clé, et un fichier édité à la main peut
+  // l'avoir à moitié. On la remet toujours d'aplomb — deux tableaux, jamais autre chose.
+  if(!state.trash || typeof state.trash!=="object") state.trash = emptyTrash();
+  if(!Array.isArray(state.trash.entries)) state.trash.entries = [];
+  if(!Array.isArray(state.trash.lots)) state.trash.lots = [];
   if(!state.defaults || typeof state.defaults!=="object") state.defaults = {};
   // le défaut doit pointer sur un élément existant, sinon on prend le premier
   if(!state.categories.includes(state.defaults.categories)) state.defaults.categories = state.categories[0];
@@ -3638,6 +3908,7 @@ function wire(){
   $("#newEntryBtn").onclick=openTicketNew;
   $("#tkEditBtn").onclick=tkEnterEdit;
   $("#tkDupBtn").onclick=()=>{ const before=state.nextId; dupEntry(navKey); openTicketDetail(before); };
+  $("#tkAbandonBtn").onclick=()=>{ if(navKey==null) return; abandonEntry(navKey); openTicketDetail(navKey,{keep:true}); };
   $("#tkArchBtn").onclick=()=>{ const e=state.entries.find(x=>x.n===navKey); if(!e) return; if(e.archived) unarchiveEntry(e.n); else archiveEntry(e.n); openTicketDetail(navKey,{keep:true}); };
   $("#tkDelBtn").onclick=()=>{ const n=navKey; delEntry(n); if(!state.entries.find(x=>x.n===n)) closeDetail(); };
   $("#tkCloseBtn").onclick=closeDetail;
@@ -3651,8 +3922,9 @@ function wire(){
   $("#lotCancelBtn").onclick=lotCancel;
   $("#lotSaveBtn").onclick=lotSave;
   $("#lotDupBtn").onclick=()=>{ const l=state.lots.find(x=>x.id===navKey); if(!l) return; const clone=JSON.parse(JSON.stringify(l)); clone.name=(l.name||"lot")+" (copie)"; clone.id=lotIdFromName(clone.name); delete clone.pr; delete clone.prState; delete clone.prUrl; delete clone.merged; delete clone.builtSw; delete clone.archived; state.lots.push(clone); rebuildDynamicSelects(); render(); scheduleSave(); openLotDetail(clone.id); };
+  $("#lotAbandonBtn").onclick=()=>{ if(!navKey) return; abandonLot(navKey); openLotDetail(navKey,{keep:true}); };
   $("#lotArchBtn").onclick=()=>{ const l=state.lots.find(x=>x.id===navKey); if(!l) return; if(l.archived) unarchiveLot(l.id); else archiveLot(l.id); openLotDetail(navKey,{keep:true}); };
-  $("#lotDelBtn").onclick=()=>{ const i=state.lots.findIndex(x=>x.id===navKey); if(i<0) return; const l=state.lots[i]; if(!confirm(`Supprimer le lot « ${l.name} » ? (les tickets ne sont pas supprimés)`)) return; deleteLot(i); closeDetail(); };
+  $("#lotDelBtn").onclick=()=>{ const i=state.lots.findIndex(x=>x.id===navKey); if(i<0) return; deleteLot(i); closeDetail(); };   // ATL-080 — plus de confirm : le geste range à la corbeille, il est réversible
   $("#lotCloseBtn").onclick=closeDetail;
   $("#lotBack").onclick=goBackDetail;
   $("#lotModal").addEventListener("click",e=>{ if(e.target.id==="lotModal" && !$("#lotBox").classList.contains("editing")) closeDetail(); });   // PS-046 (même protection côté lot)

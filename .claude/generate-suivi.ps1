@@ -82,14 +82,15 @@ $REF_LOT = @{
   'En cours' = 'en-travail'; 'En PR' = 'en-travail'; 'Mergé' = 'en-travail'
   'Terminé' = 'clos'; 'Buildé SW' = 'clos'; 'Déployé' = 'clos'; 'En ligne' = 'clos'
   'Clos' = 'clos'; 'Fait' = 'clos'
+  'Abandonné' = 'hors'
 }
 $REF_ENTREE = @{
   'À faire' = 'ouvert'
   'En cours' = 'en-travail'; 'En PR' = 'en-travail'
   'Fait' = 'clos'; 'En ligne' = 'clos'
-  'Parké' = 'hors'; 'En pause' = 'hors'
+  'Parké' = 'hors'; 'En pause' = 'hors'; 'Abandonné' = 'hors'
 }
-$ORDRE_ENTREE = @('À faire', 'En cours', 'En PR', 'Fait', 'En ligne', 'Parké', 'En pause')
+$ORDRE_ENTREE = @('À faire', 'En cours', 'En PR', 'Fait', 'En ligne', 'Parké', 'En pause', 'Abandonné')
 function DeclClasses($obj) {              # bloc socle -> table libellé→classe, ou $null
   if (-not $obj) { return $null }
   $h = @{}
@@ -124,7 +125,7 @@ function ClasseEntree($e) { return (ClasseStatut ([string]$e.stat) $CL_ENTREE $R
 # Servir les libellés de TOLÉRANCE (« En ligne », « En pause ») à un dépôt qui ne les déclare
 # pas ajouterait deux lignes à zéro dans le tableau de répartition : l'échelle de repli est
 # donc celle du §2.1, pas la table de classes, qui est plus large exprès.
-$ECHELLE_ENTREE = @('À faire', 'En cours', 'En PR', 'Fait', 'Parké')
+$ECHELLE_ENTREE = @('À faire', 'En cours', 'En PR', 'Fait', 'Parké', 'Abandonné')
 $STATS = @()
 $connus = if ($CL_ENTREE) { @($CL_ENTREE.Keys) } else { $ECHELLE_ENTREE }
 foreach ($s in $ORDRE_ENTREE) { if ($connus -contains $s) { $STATS += $s } }
@@ -323,13 +324,17 @@ function Write-SuiviActif([string]$Path) {
   }
   $a.Add('')
 
-  # ---- Parqués : hors de l'actionnable, mais jamais silencieux ----
+  # ---- Hors de l'actionnable : jamais silencieux ----
+  # La section est décidée par la CLASSE 'hors', pas par un libellé — elle réunit donc « Parké »
+  # (en pause, avec condition de réouverture) et « Abandonné » (on ne le fera pas, ATL-080). Ces
+  # deux-là ne se lisent pas pareil : le statut est écrit sur chaque ligne, sinon le sous-titre
+  # d'avant — « la condition de réouverture est dans le ticket » — devenait faux pour la moitié.
   if ($parked.Count) {
-    $a.Add('## Parqués (' + $parked.Count + ')'); $a.Add('')
-    $a.Add('_Rien à y faire en l''état. La raison et la condition de réouverture sont dans le ticket._'); $a.Add('')
+    $a.Add('## Hors de l''actionnable (' + $parked.Count + ')'); $a.Add('')
+    $a.Add('_Rien à y faire. **Parké** : en l''état seulement, la condition de réouverture est dans le ticket. **Abandonné** : on ne le fera pas._'); $a.Add('')
     foreach ($e in $parked) {
       $lotTag = if ($e.lot) { ' · ' + [string]$e.lot } else { '' }
-      $a.Add('- ' + (IdStr $e) + ' · ' + $e.prio + $lotTag + ' — ' + $e.title)
+      $a.Add('- ' + (IdStr $e) + ' · ' + $e.prio + ' · ' + [string]$e.stat + $lotTag + ' — ' + $e.title)
     }
     $a.Add('')
   }

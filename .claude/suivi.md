@@ -1,6 +1,6 @@
 # Suivi popott
 
-_Généré le 10/09/2026 15:51:13 par `.claude\generate-suivi.ps1`. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
+_Généré le 10/09/2026 18:02:10 par `.claude\generate-suivi.ps1`. Source de vérité : `suivi.json` — ne pas éditer ce .md à la main._
 
 _Convention : au terme du code, chaque IA renseigne `codedWith` sur chaque ticket avec son nom exact avant tout passage à `Fait`._
 
@@ -13,6 +13,7 @@ _Convention : au terme du code, chaque IA renseigne `codedWith` sur chaque ticke
 | En PR | 0 | 0 | 0 | 0 | 0 |
 | Fait | 1 | 2 | 0 | 0 | 3 |
 | Parké | 0 | 0 | 0 | 0 | 0 |
+| Abandonné | 0 | 0 | 0 | 0 | 0 |
 | **Total** | 1 | 3 | 2 | 2 | **8** |
 
 ## Par lot

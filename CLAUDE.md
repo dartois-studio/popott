@@ -137,5 +137,5 @@ Le suivi vit dans `.claude` :
 9. Après le merge, il reste `rien de particulier : le merge clôt le lot` —
    c'est Guillaume qui la déclenche, puis marque le lot `Terminé` dans l'app.
 
-**Ne jamais** lire `.claude/suivi-projet.html` en entier (≈ 210 Ko) : `Grep` puis `Read` ciblé.
+**Ne jamais** lire `.claude/suivi-projet.html` en entier (≈ 257 Ko) : `Grep` puis `Read` ciblé.
 Son bloc `PROJECT` (en tête du `<script>`) porte la config du suivi ; le reste est générique.
