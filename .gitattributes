@@ -1,0 +1,25 @@
+# Garde-fou des fins de ligne -- ATL-021, mesure du 10/09/2026.
+#
+# Les fichiers du suivi sont ecrits en LF strict par le tracker et par
+# generate-suivi.ps1 (contrat de format, SOCLE.md). Sans regle ici, la
+# conversion depend de core.autocrlf, herite de la configuration SYSTEME de
+# Git for Windows : ce reglage est sur la machine, il ne suit pas le depot.
+# Au prochain checkout ou clone la copie de travail repasse en CRLF, et le
+# premier enregistrement depuis la page de suivi reecrit le fichier entier --
+# exactement le defaut qu'ATL-046 venait de payer.
+#
+# Ce depot tenait jusqu'ici PAR CHANCE, pas par contrat : sa copie de travail
+# est deja en LF sur 64 fichiers sur 65, parce que la machine s'y prete. C'est
+# precisement ce que la decision du 01/09/2026 refusait.
+#
+# Portee limitee au suivi, volontairement : meme forme que sur les autres
+# depots du parc, pour qu'il n'y ait qu'une regle a relire.
+.claude/suivi.json          -text
+.claude/suivi.md            -text
+.claude/suivi-actif.md      -text
+.claude/suivi-projet*.html  -text
+.claude/generate-suivi.ps1  -text
+.claude/sync-pr.ps1         -text
+
+# Et ce fichier lui-meme, sinon git avertit a chaque `add` qu il le convertira.
+.gitattributes              -text
