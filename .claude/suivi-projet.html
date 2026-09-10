@@ -321,22 +321,41 @@
 
   /* ---------- Vue Liste des lots (Roadmap) ---------- */
   #view.as-lotlist { display: block; overflow-x: auto; }
-  .lots-tbl .t-num { color: var(--muted); font-variant-numeric: tabular-nums; }
-  .lots-tbl .t-lotname { font-weight: 700; }
-  .lots-tbl .t-goal { color: var(--muted); max-width: 340px; }
-  .lots-tbl .t-tix { color: var(--muted); font-size: 12px; }
+  /* ATL-060 (suite) : table-layout:fixed + largeurs devinées en dur a produit pire que le mal — un seul
+     redimensionnement stocké en trop grand (colPrefs) faisait déborder tout le budget des autres colonnes
+     (collision Étape/Diff, "#" énorme). Revenu à table-layout:auto par défaut (jamais qu'après un
+     redimensionnement manuel, comportement d'origine) : les colonnes à contenu connu (Étape, Diff., ID, IA,
+     PR, #) se dimensionnent SEULES à leur contenu — « juste une marge avant/après » — sans largeur à deviner.
+     Seules Objectif / Tickets / Lot, à contenu variable, sont bornées par un max-width + ellipsis. */
+  .lots-tbl .t-num { position: relative; padding-left: 16px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .lots-tbl .t-lotname { font-weight: 700; min-width: 140px; max-width: 260px; }
+  /* Une ligne = une ligne de texte, pas un bloc — clamp 1 ligne + texte complet au clic (.expanded) ou au survol (title). */
+  .lots-tbl .t-goal { color: var(--muted); min-width: 160px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .lots-tbl .t-goal.expanded { white-space: normal; overflow: visible; text-overflow: clip; }
+  .lots-tbl .t-tix { color: var(--muted); font-size: 12px; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .lots-tbl .t-tix.expanded { white-space: normal; overflow: visible; text-overflow: clip; }
   .lots-tbl .t-act { white-space: nowrap; text-align: right; }
   .lots-tbl tr.done { opacity: .62; }
   .lstage { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
   .ldiff { display: inline-block; font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; border: 1px solid; border-radius: 999px; padding: 1px 8px; line-height: 16px; }
-  .lots-tbl .t-diff { white-space: nowrap; }
+  /* ATL-060 (suite, 4e signalement) : le clip n'était posé qu'au cas par cas (Étape/Diff., Objectif, Tickets,
+     Lot) — n'importe quelle AUTRE colonne (ID, Prios, IA, PR), une fois resserrée sous son contenu réel par
+     un redimensionnement manuel, pouvait peindre par-dessus sa voisine. Un seul filet, universel, sur toute
+     cellule de la Liste des lots : quelle que soit la colonne et quelle que soit la façon dont elle a été
+     réduite, son contenu s'arrête à son bord. Les cellules qui veulent le texte complet (`.expanded`, plus
+     spécifiques) le reprennent explicitement au-dessus. */
+  .lots-tbl tbody td { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .lotcard .lhead .ldiff { flex: none; }
   /* Arborescence des tickets dans la Liste des lots (PS-038) */
   .lot-tw { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; width: 22px; margin-right: 2px; padding: 0; vertical-align: middle; }
   .lot-tw:hover { color: var(--accent); }
   .lots-tbl .t-lotname.no-tw { padding-left: 28px; }
   /* PS-040 : nom de lot cliquable → pop-up détail */
-  .lot-namelink { cursor: pointer; }
+  /* ATL-060 : un nom de lot long enveloppait sur 2 lignes et gonflait la ligne — clamp 1 ligne, nom complet en infobulle. */
+  /* ATL-060 : ligne flex — le bouton ▸ garde sa taille, le nom se réduit et s'ellipse dans l'espace restant, jamais sur 2 lignes. */
+  .lots-tbl .lotname-row { display: flex; align-items: center; min-width: 0; }
+  .lots-tbl .lotname-row .lot-tw { flex: none; }
+  .lot-namelink { cursor: pointer; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lot-namelink:hover { color: var(--accent); text-decoration: underline; }
   .lots-tbl tr.lot-tix > td { border-bottom: 1px dashed var(--border); background: var(--bg-soft, rgba(127,127,127,.05)); }
   .lot-tix-inner { display: flex; align-items: center; }
@@ -524,6 +543,10 @@
   .linkrow { display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; cursor:pointer; background:var(--panel); }
   .linkrow:hover { border-color:var(--accent); background:var(--panel-2); }
   .linkrow .linktitle { flex:1; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Ticket archivé listé par le pop-up de son lot archivé : la ligne se lit et s'ouvre comme les
+     autres, la marque 🗄 dit seulement d'où elle vient (elle ne sort pas des vues courantes). */
+  .linkrow.arch { border-style:dashed; }
+  .linkrow .linkarch { font-size:11px; opacity:.55; flex:none; }
   .det-pdot { width:8px; height:8px; border-radius:50%; flex:none; }
   .det-pdot.P0{background:var(--p0);} .det-pdot.P1{background:var(--p1);} .det-pdot.P2{background:var(--p2);} .det-pdot.P3{background:var(--p3);}
   .decision { border-left:3px solid var(--lot); background:var(--panel-2); border-radius:0 7px 7px 0; padding:7px 10px; font-size:12px; line-height:1.45; }
@@ -555,7 +578,10 @@
   .tbl th.colgap:hover span { opacity:1; color:var(--p1); }
   .tbl td.colgap { padding:0; }
   /* Réordonnancement des lignes de la liste des lots */
-  .lots-tbl .lot-grip { display:inline-block; width:16px; cursor:grab; color:var(--muted); opacity:0; margin-right:4px; vertical-align:middle; user-select:none; }
+  /* ATL-060 (suite) : en position normale (inline-block, 16px + marge), la poignée réservait sa place en
+     permanence même invisible (opacity:0 ne retire rien au flux) — la colonne "#" gonflait pour un caractère
+     qu'elle n'affiche qu'au survol. En overlay (absolute), elle ne compte plus dans la largeur de la colonne. */
+  .lots-tbl .lot-grip { position:absolute; left:1px; top:50%; transform:translateY(-50%); width:13px; text-align:center; cursor:grab; color:var(--muted); opacity:0; user-select:none; }
   .lots-tbl tr:hover .lot-grip { opacity:.55; }
   .lots-tbl .lot-grip:hover { opacity:1; color:var(--accent); }
   .lots-tbl .lot-grip:active { cursor:grabbing; }
@@ -1037,6 +1063,30 @@ const PRIOS   = ["P0","P1","P2","P3"];
 const PRIO_LABEL = { P0:"P0 · critique", P1:"P1 · important", P2:"P2 · utile", P3:"P3 · nice-to-have" };
 const STATS   = ["À faire","En cours","En PR","Fait","Parké"];
 const STAT_CLASS = { "À faire":"st-todo", "En cours":"st-doing", "En PR":"st-pr", "Fait":"st-done", "Parké":"st-park" };
+
+/* ---- Socle du suivi : le dictionnaire des statuts, DÉRIVÉ de la config ci-dessus (ATL-046) ----
+   Les TICKETS parlent la même langue dans tous les dépôts — c'est STATS, et la page le code en
+   dur à douze endroits (`e.stat==="Fait"`), donc un dialecte de ticket n'a jamais été lisible :
+   il cassait en silence. Le mot de métier ne concerne que les deux DERNIÈRES colonnes du
+   planning des LOTS, et il vient de PROJECT.delivery : « Buildé SW », « Déployé », « Terminé ».
+   Conséquence utile : un suivi.json neuf naît déclaré, et un ancien reçoit son bloc au premier
+   enregistrement — sans que personne ait à l'écrire à la main. Contrat : SOCLE.md §2 et §4. */
+const CLASSE_ENTREE_REF = { "À faire":"ouvert", "En cours":"en-travail", "En PR":"en-travail", "Fait":"clos", "Parké":"hors" };
+const SOCLE_DEFAUT = (() => {
+  const lot = { "Planifié":"ouvert", "En cours":"en-travail", "En PR":"en-travail", "Mergé":"en-travail", "Terminé":"clos" };
+  if(S_MERGED) lot[S_MERGED] = "en-travail";   // colonne 4, relabellisée par le projet
+  if(S_DONE)   lot[S_DONE]   = "clos";         // colonne 5, idem — c'est CE mot que la page écrit
+  const ent = {}; STATS.forEach(s => ent[s] = CLASSE_ENTREE_REF[s] || "");
+  return { version:1, statutsEntree:ent, statutsLot:lot, extensions:[] };
+})();
+/* Classe d'un statut de lot : le dialecte déclaré du dépôt d'abord, la table de référence
+   ensuite. Un libellé que personne ne sait lire ne rend rien — le lot reste alors visible,
+   au lieu de disparaître de l'actionnable (SOCLE.md §3). */
+function classeLot(st){
+  if(!st) return "";
+  const d = (state && state.socle && state.socle.statutsLot) || null;
+  return (d && d[st]) || SOCLE_DEFAUT.statutsLot[st] || "";
+}
 const CODERS  = ["", ...PROJECT.coders];
 const CODER_LABEL = Object.assign({ "":"Non renseigné" }, ...PROJECT.coders.map(c=>({[c]:c})));
 const CODER_FILTER_LABEL = Object.assign({ "":"Tous les outils de code", "__none__":"Non renseigné" }, ...PROJECT.coders.map(c=>({[c]:c})));
@@ -1064,7 +1114,8 @@ function normFilters(a){
 
 const LS_KEY = NS("tracker_v1");
 let state = { nextId: 1, entries: [], categories: SEED_CATEGORIES.slice(), types: SEED_TYPES.slice(), lots: [],
-              defaults: { categories: SEED_CATEGORIES[0], types: SEED_TYPES[0] } };
+              defaults: { categories: SEED_CATEGORIES[0], types: SEED_TYPES[0] },
+              socle: SOCLE_DEFAUT };
 let pending = [];        // captures de l'entrée en cours : {name, dataUrl}
 let hiddenCols = (()=>{ try { return JSON.parse(localStorage.getItem(NS("hiddencols"))||"{}") || {}; } catch(e){ return {}; } })();  // colonnes masquées par axe
 /* Filtres SÉPARÉS par famille de vues (comme Notion : chaque vue a ses filtres) :
@@ -1079,8 +1130,8 @@ let filtersByScope = (()=>{ try { return normScopes(JSON.parse(localStorage.getI
 let filters = filtersByScope.tickets;   // pointeur vers le scope de la vue courante (repointé dans setView)
 let planDisplay = (()=>{ const def={hideEmpty:false, showTickets:true, showDecisions:true, compact:false};
   try { return Object.assign(def, JSON.parse(localStorage.getItem(NS("plandisplay"))||"{}")); } catch(e){ return def; } })();  // options d'affichage du Planning
-function saveFilters(){ try { localStorage.setItem(NS("filters"), JSON.stringify(filtersByScope)); } catch(e){} }
-function savePlanDisplay(){ try { localStorage.setItem(NS("plandisplay"), JSON.stringify(planDisplay)); } catch(e){} }
+function saveFilters(){ try { lsSet(NS("filters"), JSON.stringify(filtersByScope)); } catch(e){} }
+function savePlanDisplay(){ try { lsSet(NS("plandisplay"), JSON.stringify(planDisplay)); } catch(e){} }
 let editingId = null;
 let dirHandle = null;
 let dirReady = false;    // vrai quand la permission d'écriture est effectivement accordée
@@ -1104,10 +1155,39 @@ let tableSort = null;    // { key, dir } tri par colonne dans la vue Liste (dir:
 /* ---------- Préférences de colonnes par liste : ordre / masquées / largeurs ----------
    <ns>_colprefs = { <liste>: { order:[clés], hidden:[clés], w:{clé:px} } } — listes : tickets, lots, archent, archlot. */
 let colPrefs = (()=>{ try { return JSON.parse(localStorage.getItem(NS("colprefs"))||"{}") || {}; } catch(e){ return {}; } })();
+/* ATL-060 (suite) : borne un redimensionnement manuel de colonne — un drag accidentel de plusieurs centaines
+   de px (ex. poignée ⠿ confondue avec la poignée de redimensionnement voisine) grossissait une colonne à
+   contenu court au point d'affamer les autres (le budget total dépasse le conteneur, les colonnes voisines
+   se compriment jusqu'à se chevaucher). Clampée à la fois à l'écriture et à la lecture : une valeur déjà
+   stockée avant ce garde-fou se corrige donc seule au prochain rendu, sans passer par « Réinitialiser ».
+   ATL-060 (suite, 4e signalement) : un plafond UNIQUE (480px) reste bien trop généreux pour une colonne à
+   contenu court et connu d'avance (Étape, Diff., #...) — un glissement DÉLIBÉRÉ pouvait encore l'agrandir de
+   dizaines/centaines de px sans aucun rapport avec ce qu'elle affiche. Plafond PAR COLONNE : chaque clé de
+   `LOTLIST_COLS` a son propre maximum, dimensionné à son contenu réel (une valeur absente retombe sur
+   MAX_COL_W, le plafond générique historique, pour les colonnes non listées ici — ex. la liste "tickets"). */
+const MAX_COL_W = 480;
+const COL_MAX_W = { order:70, id:110, stage:130, diff:110, prios:130, ia:150, pr:70, act:90, name:400, goal:480, tix:320 };
+function clampColW(px, key){ const max=(key && COL_MAX_W[key]) || MAX_COL_W; return Math.max(36, Math.min(max, Math.round(px))); }
 let thDragKey = null;     // clé de la colonne en cours de glissement (en-tête ou gestionnaire)
 let colResizing = false;  // vrai pendant un redimensionnement (neutralise le clic-tri qui suit)
-function saveColPrefs(){ try { localStorage.setItem(NS("colprefs"), JSON.stringify(colPrefs)); } catch(e){} }
-function colPref(list){ return colPrefs[list] || (colPrefs[list]={}); }
+function saveColPrefs(){ try { lsSet(NS("colprefs"), JSON.stringify(colPrefs)); } catch(e){} }
+/* ATL-060 (suite, 2e signalement) : le clamp seul ne suffisait pas — un navigateur réel avait DÉJÀ plusieurs
+   largeurs de colonne mémorisées (`w`) pour "lots", posées sous l'ancien jeu de colonnes / l'ancien budget.
+   Même chacune sous 480px, leur COMBINAISON reproduisait le bug (une grande + plusieurs petites = colonnes
+   voisines écrasées). Un clamp par valeur ne corrige pas une combinaison stale ; il fallait invalider le
+   bloc entier. Chaque changement de forme des colonnes de "lots" bascule LOTS_COLPREFS_VERSION : la 1re
+   lecture après ce bascule jette `order/hidden/w` et repart sur les largeurs par défaut (table-layout:auto),
+   sans que Guillaume ait besoin de cliquer sur « Réinitialiser les colonnes ». */
+const LOTS_COLPREFS_VERSION = 2;
+function colPref(list){
+  const p = colPrefs[list] || (colPrefs[list]={});
+  if(list==="lots" && p.v!==LOTS_COLPREFS_VERSION){
+    colPrefs[list] = { v: LOTS_COLPREFS_VERSION };
+    saveColPrefs();
+    return colPrefs[list];
+  }
+  return p;
+}
 /* Colonnes gérées (hors `fixed`) dans l'ordre choisi ; les clés nouvelles/inconnues gardent leur place par défaut. */
 function orderedCols(list, defs){
   const managed=defs.filter(c=>!c.fixed);
@@ -1180,6 +1260,7 @@ function icon(name, filled){
     pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
     star:   '<path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9 6.19 20.9 7.3 14.43 2.6 9.85l6.5-.95L12 2.5Z"/>',
     copy:   '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    clipboard: '<rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
     archive:'<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>'
   };
   return `<svg viewBox="0 0 24 24" fill="${filled?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${map[name]}</svg>`;
@@ -1238,7 +1319,7 @@ async function reconcileWithDisk(){
   if(!state.entries.length){                            // rien en local → on adopte le disque
     await hydrateCaptures(disk.data); adoptState(disk.data); markSynced(disk.mtime);
     render(); rebuildDynamicSelects(); resetForm();
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){}
+    try { lsSet(LS_KEY, JSON.stringify(state)); } catch(e){}
     setFoot("Chargé depuis .claude · " + new Date().toLocaleTimeString('fr-FR'));
     return;
   }
@@ -1290,7 +1371,42 @@ async function backupDiskJson(){
     await writeFile(`suivi.backup-${tsStamp()}.json`, txt); return true;
   } catch(e){ return false; }
 }
-function backupLocalToLS(){ try { localStorage.setItem(NS("tracker_backup_")+tsStamp(), JSON.stringify(state)); } catch(e){} }
+/* Écriture locale tolérante à la saturation.
+   Tous les suivis ouverts en fichier local partagent le MÊME espace de stockage « file:// » du
+   navigateur (Atelier, PatternStudio, RoomLab, Sable…), et les sauvegardes s'y empilaient sans
+   limite. Une fois cet espace plein, l'enregistrement de l'état échouait en silence (catch vide) :
+   « Charger la version .claude » n'était plus jamais mémorisé et la modale de conflit revenait
+   à chaque rafraîchissement. On borne les sauvegardes, on purge si ça déborde, et on le dit. */
+const BACKUP_KEEP = 3;                        // sauvegardes conservées, par suivi
+const BACKUP_MARK = /(_tracker_backup_|-backup-)(?=[0-9])/;   // les deux formats de clé en usage
+const BACKUP_OWN  = NS("tracker_backup_");                   // préfixe des sauvegardes de CE suivi
+function backupKeys(){
+  const out=[];
+  try {                                       // certains contextes refusent tout accès au stockage
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && BACKUP_MARK.test(k)) out.push(k); }
+  } catch(e){ return []; }
+  return out.sort();                          // l'horodatage termine la clé → le tri suit le temps
+}
+function backupGroup(k){ const m=BACKUP_MARK.exec(k); return k.slice(0, m.index+m[0].length); }
+function pruneBackups(keep, allProjects){
+  const groups={};
+  backupKeys().forEach(k=>{ const g=backupGroup(k);
+    if(!allProjects && g!==BACKUP_OWN) return; (groups[g]=groups[g]||[]).push(k); });
+  let n=0;
+  Object.keys(groups).forEach(g=> groups[g].slice(0, Math.max(0, groups[g].length-keep))
+    .forEach(k=>{ try { localStorage.removeItem(k); n++; } catch(e){} }));
+  return n;
+}
+/* Écrit dans le navigateur ; en cas de saturation, purge les sauvegardes et réessaie.
+   Renvoie false (et prévient dans le bandeau) si l'écriture reste impossible. */
+function lsSet(key, val){
+  try { localStorage.setItem(key, val); return true; } catch(e){}
+  if(pruneBackups(BACKUP_KEEP, true)){ try { localStorage.setItem(key, val); return true; } catch(e){} }
+  if(pruneBackups(0, false)){ try { localStorage.setItem(key, val); return true; } catch(e){} }
+  try { setFoot("⚠ Mémoire du navigateur saturée : l'état n'a pas pu être gardé en local. Le dossier .claude reste la référence — ferme les autres suivis ouverts, puis recharge."); } catch(e){}
+  return false;
+}
+function backupLocalToLS(){ pruneBackups(BACKUP_KEEP-1, false); lsSet(NS("tracker_backup_")+tsStamp(), JSON.stringify(state)); }
 
 /* ---------- Modale de conflit (mini-log des différences) ---------- */
 let conflictCtx = null;
@@ -1345,9 +1461,10 @@ async function conflictLoadDisk(){
   await hydrateCaptures(disk.data); adoptState(disk.data); markSynced(disk.mtime);
   $("#conflictModal").classList.remove("show"); conflictCtx=null;
   render(); rebuildDynamicSelects(); resetForm();
-  dirReady = true; try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){}
+  dirReady = true; const kept = lsSet(LS_KEY, JSON.stringify(state));
   updateStorageUI();
-  toast("Version .claude chargée (tes saisies locales sauvegardées dans le navigateur).");
+  toast(kept ? "Version .claude chargée (tes saisies locales sauvegardées dans le navigateur)."
+             : "Version .claude chargée à l'écran, mais le navigateur n'a pas pu la mémoriser — voir le bandeau en bas.");
 }
 async function fileMtime(name){
   try { const fh = await dirHandle.getFileHandle(name); return (await fh.getFile()).lastModified; }
@@ -1495,12 +1612,17 @@ function mergeExternal(disk){
     if(added.length) state[k]=(state[k]||[]).concat(added);
   });
   if(JSON.stringify(state.defaults)===JSON.stringify(bas.defaults) && disk.defaults) state.defaults=disk.defaults;
+  /* ATL-044 — le bloc `socle` (le contrat de données du dépôt : classes de statut, extensions)
+     s'écrit À LA MAIN dans suivi.json et JAMAIS par cette page. Le disque a donc toujours
+     raison : sans cette ligne, une page ouverte avant l'ajout du bloc l'effacerait à la
+     sauvegarde suivante, et le dépôt retomberait en version 0 sans un mot. */
+  if(disk.socle) state.socle = disk.socle;
 }
 
 /* ---------- Sauvegarde ---------- */
 async function saveAll(){
   state.savedAt = new Date().toISOString();
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){}
+  try { lsSet(LS_KEY, JSON.stringify(state)); } catch(e){}
   if(dirHandle && dirReady && await ensurePerm(dirHandle)){
     try {
       // PS-051 — verrou optimiste : si le disque a bougé depuis la dernière synchro (modifs de Claude
@@ -1529,6 +1651,19 @@ async function saveAll(){
     setFoot("Enregistré (local) · " + new Date().toLocaleTimeString('fr-FR'));
   }
   dirty = false;
+}
+
+/* ATL-048 — `gain` est un champ du SOCLE (`templates/suivi-projet/SOCLE.md` §1.1), donc la page
+   doit savoir le RENDRE, dans les six dépôts. Elle ne l'écrit jamais : il s'inscrit à la main dans
+   `suivi.json`, comme le bloc `socle`. Format identique à `GainStr` de `generate-suivi.ps1`, qui
+   écrit l'autre moitié de `suivi.md` — sans ça les deux writers ne disent pas la même chose.
+   Tolérant sur la forme : une note écrite en chaîne plutôt qu'en objet se rend quand même. */
+function gainStr(g){
+  if(!g) return "";
+  if(typeof g==="string") return g;
+  const s=[g.avant,g.apres].filter(Boolean).join(" → ");
+  if(!g.note) return s;
+  return s ? s+" · "+g.note : String(g.note);
 }
 
 /* ---------- Génération du Markdown ---------- */
@@ -1569,6 +1704,8 @@ function buildMarkdown(capMap){
       L.push(`#### ${idStr(e)} · ${e.type} · ${e.prio} · ${e.dom}${lot}`);
       L.push(`**${e.title||"(sans titre)"}**`,"");
       if(e.desc){ L.push(e.desc,""); }
+      const gs = gainStr(e.gain);
+      if(gs) L.push(`> 💰 **Gain** ${e.gain.date?e.gain.date+" — ":""}${gs}`,"");
       const caps = capMap[e.n] || [];
       caps.forEach((rel,i)=> L.push(`![${idStr(e)} capture ${i+1}](${rel})`));
       if(!caps.length && (e.captures||[]).length) L.push(`_(${e.captures.length} capture(s) — connecter .claude pour les écrire en PNG)_`);
@@ -1654,6 +1791,8 @@ function buildTicketRead(e){
   if(e.pr) h+=`<div><div class="sec-title">Pull request</div><div class="prline">${prHtml(e)}</div></div>`;
   const caps=e.captures||[];
   if(caps.length){ h+=`<div><div class="sec-title">Captures <span class="cnt">${caps.length}</span></div><div class="caps">`+caps.map((c,i)=>`<img src="${c.dataUrl||''}" alt="capture ${i+1}">`).join("")+`</div></div>`; }
+  const gs=gainStr(e.gain);
+  if(gs) h+=`<div><div class="sec-title">💰 Gain mesuré</div><div class="decision"><span class="d-date">${esc(e.gain.date?fmtDate(e.gain.date):'')}</span> — ${esc(gs)}</div></div>`;
   h+=`<div class="kv"><span class="k">Créé</span><span>${esc(fmtDate(e.created))}</span><span class="k">Mis à jour</span><span>${esc(fmtDate(e.updated))}</span>`;
   if(e.archived) h+=`<span class="k">Archivé</span><span>${esc(fmtDate(e.archived))}</span>`;
   h+=`</div>`;
@@ -1691,9 +1830,9 @@ function buildLotRead(l){
   h+=`</div>`;
   h+=`<div class="det-desc">${l.goal?esc(l.goal):'<span style="color:var(--muted)">— aucun objectif —</span>'}</div>`;
   if(l.pr) h+=`<div><div class="sec-title">Pull request</div><div class="prline">${prHtml(l)}</div></div>`;
-  const tix=lotEntries(l);
+  const tix=lotEntriesForRead(l);
   h+=`<div><div class="sec-title">Tickets liés <span class="cnt">${tix.length}</span></div><div class="linklist">`;
-  h+= tix.length ? tix.map(e=>`<div class="linkrow" data-n="${e.n}"><span class="det-pdot ${e.prio}" style="display:inline-block"></span><span class="id">${idStr(e)}</span><span class="linktitle">${esc(e.title)}</span><span class="st-select ${STAT_CLASS[e.stat]||''}">${esc(e.stat)}</span></div>`).join("") : '<div style="color:var(--muted);font-size:12px">Aucun ticket lié.</div>';
+  h+= tix.length ? tix.map(e=>`<div class="linkrow${e.archived?" arch":""}" data-n="${e.n}"${e.archived?` title="Archivé le ${esc(fmtDate(e.archived))}"`:""}><span class="det-pdot ${e.prio}" style="display:inline-block"></span><span class="id">${idStr(e)}</span><span class="linktitle">${esc(e.title)}</span>${e.archived?'<span class="linkarch">🗄</span>':''}<span class="st-select ${STAT_CLASS[e.stat]||''}">${esc(e.stat)}</span></div>`).join("") : '<div style="color:var(--muted);font-size:12px">Aucun ticket lié.</div>';
   h+=`</div></div>`;
   const dec=l.decisions||[];
   if(dec.length){ h+=`<div><div class="sec-title">📌 Décisions <span class="cnt">${dec.length}</span></div>`+dec.map(d=>`<div class="decision"><span class="d-date">${esc(d.date?fmtDate(d.date):'')}</span> — ${esc(d.txt||'')}</div>`).join("")+`</div>`; }
@@ -1703,12 +1842,21 @@ function buildLotRead(l){
   const box=$("#lotRead"); box.innerHTML=h;
   box.querySelectorAll(".linkrow").forEach(row=>row.onclick=()=>navTicket(+row.dataset.n));
 }
+/* Le pop-up affiche l'id du lot, pas son rang — c'est la place qu'occupe `ATL-053` sur le pop-up
+   d'un ticket, et le pendant y manquait. L'id est le SEUL nom stable d'un lot : `order` se
+   renumérote à chaque glisser-déposer du Planning (reorderLots), alors que l'id ne bouge jamais,
+   et c'est lui qu'emploient suivi.json, les projections .md et les messages de commit. Le rang
+   n'est pas perdu pour autant : il garde sa ligne « Ordre » dans la grille juste en dessous. */
+function setLotIdChip(l){
+  const c=$("#lotId"); c.textContent=l.id||"—";
+  c.title="Identifiant du lot — stable. C'est le nom employé dans suivi.json, les projections .md et les commits.";
+}
 function openLotDetail(id, opts={}){
   const l=state.lots.find(x=>x.id===id); if(!l) return;
   if(opts.push) pushNav(); else if(!opts.keep) navStack=[];
   navType="lot"; navKey=id; updateBack();
   $("#lotBox").dataset.mode="view"; $("#lotBox").classList.remove("editing");
-  $("#lotId").textContent="Lot "+(l.order!=null?l.order:""); $("#lotTitle").textContent=l.name||"(sans nom)";
+  setLotIdChip(l); $("#lotTitle").textContent=l.name||"(sans nom)";
   $("#lotArchBtn").textContent = l.archived ? "↩ Désarchiver" : "🗄 Archiver";
   buildLotRead(l);
   $("#leName").value=l.name||""; $("#leGoal").value=l.goal||""; $("#leBranch").value=l.branch||""; $("#lePr").value=l.pr||""; $("#leOrder").value=(l.order!=null?l.order:"");
@@ -1722,7 +1870,7 @@ function lotSave(){
   const pr=$("#lePr").value.trim(); if(pr) l.pr=pr; else delete l.pr;
   const ord=$("#leOrder").value.trim(); if(ord!=="") l.order=+ord;
   $("#lotBox").classList.remove("editing"); $("#lotBox").dataset.mode="view";
-  $("#lotTitle").textContent=l.name; $("#lotId").textContent="Lot "+(l.order!=null?l.order:"");
+  $("#lotTitle").textContent=l.name; setLotIdChip(l);
   buildLotRead(l); rebuildDynamicSelects(); render(); scheduleSave();
 }
 function ensureCoderAttribution(entries){
@@ -1776,6 +1924,7 @@ function dupEntry(id){
   clone.title=(e.title||"(sans titre)")+" (copie)";
   clone.created=todayISO(); clone.updated=todayISO();
   clone.codedWith="";
+  delete clone.gain;            // ATL-048 — un gain est mesuré SUR un ticket : la copie ne l'hérite pas, comme codedWith
   const idx=state.entries.findIndex(x=>x.n===id);
   state.entries.splice(idx<0?state.entries.length:idx+1, 0, clone);
   render(); scheduleSave(); toast("Dupliqué → "+idStr(clone));
@@ -1937,7 +2086,7 @@ function makeTh(list, defs, col, st, setSort, opts){
   opts=opts||{};
   const th=el("th"); th.textContent=col.label; th.dataset.key=col.key;
   if(col.key==="id") th.classList.add("c-id");
-  const w=(colPref(list).w||{})[col.key]; if(w) th.style.width=w+"px";
+  const w=(colPref(list).w||{})[col.key]; if(w) th.style.width=clampColW(w, col.key)+"px";
   if(col.get){
     th.classList.add("sortable"); th.title="Trier par "+(col.label||col.key).toLowerCase();
     if(st && st.key===col.key){ th.classList.add("sorted"); const ar=el("span","arr"); ar.textContent=st.dir>0?"▲":"▼"; th.appendChild(ar); }
@@ -1965,20 +2114,37 @@ function makeTh(list, defs, col, st, setSort, opts){
       ev.preventDefault(); ev.stopPropagation();
       const tbl=th.closest("table"); if(!tbl) return;
       const startX=ev.clientX, startW=th.getBoundingClientRect().width;
-      // Fige les largeurs courantes : seule la colonne saisie bouge pendant le drag.
-      tbl.querySelectorAll("thead th").forEach(x=>{ x.style.width=x.getBoundingClientRect().width+"px"; });
-      tbl.style.tableLayout="fixed";
-      colResizing=true; rz.classList.add("active"); document.body.classList.add("col-resizing");
-      const move=e=>{ th.style.width=Math.max(36, startW + e.clientX - startX)+"px"; };
+      /* ATL-060 (suite, 3e signalement) : un simple CLIC sur/près de la poignée (0px de mouvement — ex. en
+         essayant d'attraper la poignée ⠿ voisine dans la colonne "#") figeait déjà les 11 colonnes en
+         table-layout:fixed ET les persistait, sans qu'aucun redimensionnement réel n'ait eu lieu. Le
+         garde-fou de version (ATL-060, 2e signalement) protège contre un REGLAGE deja stocke avant lui,
+         pas contre un accident qui en recree un nouveau. Ici : tant que la souris n'a pas bouge de plus de
+         DRAG_THRESHOLD px, rien n'est fige ni sauvegarde — un clic (ou micro-tremblement) reste un no-op. */
+      const DRAG_THRESHOLD = 4;
+      let moved=false;
+      const move=e=>{
+        const dx=e.clientX-startX;
+        if(!moved){
+          if(Math.abs(dx)<DRAG_THRESHOLD) return;
+          moved=true;
+          // Fige les largeurs courantes : seule la colonne saisie bouge pendant le drag.
+          tbl.querySelectorAll("thead th").forEach(x=>{ x.style.width=x.getBoundingClientRect().width+"px"; });
+          tbl.style.tableLayout="fixed";
+          colResizing=true; rz.classList.add("active"); document.body.classList.add("col-resizing");
+        }
+        th.style.width=clampColW(startW + dx, col.key)+"px";
+      };
       const up=()=>{
         document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up);
-        // Persiste TOUTES les largeurs figées (sinon les autres colonnes sauteraient au prochain rendu).
-        const p=colPref(list); const wmap=p.w||(p.w={});
-        tbl.querySelectorAll("thead th").forEach(x=>{ const k=x.dataset.key;
-          if(k && !(defs.find(c=>c.key===k)||{}).fixed) wmap[k]=Math.round(parseFloat(x.style.width)||0); });
-        saveColPrefs();
-        rz.classList.remove("active"); document.body.classList.remove("col-resizing");
-        setTimeout(()=>{ colResizing=false; }, 0);   // neutralise le clic-tri qui suit le mouseup
+        if(moved){
+          // Persiste TOUTES les largeurs figées (sinon les autres colonnes sauteraient au prochain rendu).
+          const p=colPref(list); const wmap=p.w||(p.w={});
+          tbl.querySelectorAll("thead th").forEach(x=>{ const k=x.dataset.key;
+            if(k && !(defs.find(c=>c.key===k)||{}).fixed) wmap[k]=clampColW(parseFloat(x.style.width)||36, k); });
+          saveColPrefs();
+          rz.classList.remove("active"); document.body.classList.remove("col-resizing");
+          setTimeout(()=>{ colResizing=false; }, 0);   // neutralise le clic-tri qui suit le mouseup
+        }
       };
       document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
     });
@@ -2036,7 +2202,7 @@ function renderArchLots(c){
     const stage=lotStage(l), ents=lotEntries(l);
     const tr=el("tr","lotrow done");
     const cO=el("td","t-num"); cO.textContent=l.order||"—";
-    const cN=el("td","t-lotname"); cN.textContent=l.name;
+    const cN=el("td","t-lotname"); cN.textContent=l.name; cN.title=l.id||"";
     const cS=el("td"); cS.innerHTML=`<span class="lstage" style="color:${LOT_STAGE_COLOR[stage]}">${esc(stage)}</span>`;
     const cT=el("td","t-tix"); cT.textContent = ents.length ? `${ents.length} · ${ents.map(idStr).join(", ")}` : "—";
     const cP=el("td");
@@ -2056,7 +2222,7 @@ function toggleCol(axis, val, show){
   const set=new Set(hiddenCols[axis]||[]);
   if(show) set.delete(val); else set.add(val);
   hiddenCols[axis]=[...set];
-  try{ localStorage.setItem(NS("hiddencols"), JSON.stringify(hiddenCols)); }catch(e){}
+  try{ lsSet(NS("hiddencols"), JSON.stringify(hiddenCols)); }catch(e){}
   render();
 }
 function colAxis(){
@@ -2234,9 +2400,26 @@ function addToList(listKey, inputId){
   if(state[listKey].some(c=>c.toLowerCase()===v.toLowerCase())){ toast("Déjà présent."); return; }
   state[listKey].push(v); inp.value=""; rebuildManageLists(); rebuildDynamicSelects(); scheduleSave();
 }
+/* ATL-048 — UN LOT NÉ DANS LA PAGE PORTE UN IDENTIFIANT LISIBLE, comme un lot écrit à la main.
+   Avant : `"L"+Date.now().toString(36)`, soit `Lmtmn8x3v` — un horodatage en base 36. Deux
+   conventions cohabitaient pour le même champ (les lots du JSON s'appellent `L-socle`, `L-tdb2`)
+   et rien ne le disait, d'autant que la page n'affiche JAMAIS l'id : la liste rend `order`, le
+   pop-up titre « Lot 8 ». L'écart ne se voyait que dans `suivi.json` et les dérivés .md.
+   L'id se dérive donc du nom. Repli sur l'horodatage si le nom ne rend aucune lettre (nom fait
+   de symboles ou d'un alphabet non translittéré) : un id opaque vaut mieux qu'un id vide. */
+function lotIdFromName(name){
+  const mots=(name||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+  // Coupe sur un mot entier : `L-documents-de-suivi-proje` se lit moins bien que `L-documents-de-suivi`.
+  let slug=mots.slice(0,24);
+  if(mots.length>24 && slug.includes("-")) slug=slug.replace(/-[^-]*$/,"");
+  const base = slug ? "L-"+slug : "L"+Date.now().toString(36);
+  if(!state.lots.some(l=>l.id===base)) return base;
+  for(let i=2;;i++){ const c=base+"-"+i; if(!state.lots.some(l=>l.id===c)) return c; }
+}
 function addLot(name){
   const v=(name!==undefined?name:$("#lotNew").value).trim(); if(!v) return null;
-  const lot={ id:"L"+Date.now().toString(36), name:v };
+  const lot={ id:lotIdFromName(v), name:v };
   state.lots.push(lot); if(name===undefined) $("#lotNew").value="";
   rebuildManageLists(); rebuildDynamicSelects(); scheduleSave(); return lot;
 }
@@ -2274,6 +2457,14 @@ function filteredRows(f){
     if(f.q && !((e.title+" "+e.desc+" "+idStr(e)+" "+(e.codedWith||"")).toLowerCase().includes(f.q))) return false;
     return true;
   });
+}
+/* Un lot remonte à la recherche PAR LUI-MÊME — son id, son nom, son objectif — et plus seulement
+   par ricochet quand l'un de ses tickets correspond. Un ticket cherché par son id (`idStr`) le
+   trouvait déjà ; un lot cherché par le sien ne rendait rien, alors que l'id est le nom sous
+   lequel il apparaît dans suivi.json, les projections .md et les commits. Les deux raisons
+   s'additionnent (OU) : un filtre sur les tickets n'empêche pas un lot de sortir sur son nom. */
+function lotMatchesQ(l, q){
+  return !!q && ((l.id||"")+" "+(l.name||"")+" "+(l.goal||"")).toLowerCase().includes(q);
 }
 /* Valeurs sélectionnables d'une propriété (plus de pseudo-valeur __none__ : « est vide » la remplace). */
 function filterValueList(key){
@@ -2345,7 +2536,7 @@ function openSortMenu(anchor){
   const lab=el("div","lab"); lab.textContent="Trier par…"; pop.appendChild(lab);
   SORT_OPTS.forEach(([k,label])=>{
     const b=el("button"); b.type="button"; b.innerHTML=(k===sortKey?"✓ ":"")+esc(label);
-    b.onclick=ev=>{ ev.stopPropagation(); sortKey=k; localStorage.setItem(NS("sort"),k); closeFilterPop(); render(); };
+    b.onclick=ev=>{ ev.stopPropagation(); sortKey=k; lsSet(NS("sort"),k); closeFilterPop(); render(); };
     pop.appendChild(b);
   });
   positionFilterPop(pop, anchor);
@@ -2684,18 +2875,33 @@ function diffBadgeHtml(l){
   const m = l && DIFF_META[l.difficulty]; if(!m) return "";
   return `<span class="ldiff" style="color:${m.c};background:${m.bg};border-color:${m.b}" title="Difficulté estimée">${esc(l.difficulty)}</span>`;
 }
+/* ATL-046 : le statut se lit AVANT les extensions. L'ordre inverse — `builtSw` et `prState`
+   d'abord — était la dernière lecture de statut qui ignorait les classes (SOCLE.md §3), et il
+   se voyait : RoomLab clôt ses lots avec le mot « Clos », que la page ne connaissait pas, donc
+   ses 5 lots finis s'affichaient « Planifié ». Le dialecte du dépôt est désormais consulté en
+   premier ; `builtSw` et `prState` ne servent plus qu'à préciser une étape non déclarée. */
 function lotStage(l){
+  const cls = classeLot(l.status);
+  if(cls==="clos") return S_DONE;
   if(l.builtSw) return S_DONE;
-  if(l.status===S_DONE) return S_DONE;
-  if(l.prState==="merged") return S_MERGED;
   if(l.status===S_MERGED || l.status==="Mergé") return S_MERGED;
-  if(l.prState==="open" || (l.pr && !l.prState)) return "En PR";
+  if(l.prState==="merged") return S_MERGED;
   if(l.status==="En PR") return "En PR";
-  if(l.status==="En cours" || l.branch) return "En cours";
+  if(l.prState==="open" || (l.pr && !l.prState)) return "En PR";
+  if(cls==="en-travail" || l.branch) return "En cours";
   return "Planifié";
 }
 function lotEntries(l){
   return state.entries.filter(e=>e.lot===l.id && !e.archived).sort((a,b)=>prioRank(a.prio)-prioRank(b.prio)||a.n-b.n);
+}
+/* Tickets listés par le POP-UP d'un lot. Sur un lot archivé — donc clos, donc archivé avec les
+   siens — `lotEntries` les écartait tous et le pop-up annonçait « Aucun ticket lié » alors qu'il
+   en portait : le lot était le seul endroit d'où son propre travail devenait illisible. Un lot
+   archivé liste donc aussi ses archivés ; un lot vivant garde le filtre. Ailleurs le filtre ne
+   bouge pas : les comptes du Planning et des listes ne comptent que l'ouvert, et c'est voulu. */
+function lotEntriesForRead(l){
+  if(!l.archived) return lotEntries(l);
+  return state.entries.filter(e=>e.lot===l.id).sort((a,b)=>prioRank(a.prio)-prioRank(b.prio)||a.n-b.n);
 }
 function lotCoders(l){
   const used=new Set(lotEntries(l).map(e=>e.codedWith).filter(Boolean));
@@ -2763,7 +2969,7 @@ function renderPlanning(c){
   const grid=el("div","plan-grid");
   LOT_STAGES.forEach(stage=>{
     let lots=state.lots.filter(l=>!l.archived && lotStage(l)===stage).sort((a,b)=>(a.order||999)-(b.order||999));
-    if(filtering) lots=lots.filter(l=>lotEntries(l).some(e=>matchIds.has(e.n)));
+    if(filtering) lots=lots.filter(l=>lotMatchesQ(l,f.q) || lotEntries(l).some(e=>matchIds.has(e.n)));
     if(planDisplay.hideEmpty && !lots.length) return;   // « masquer les colonnes vides »
     const col=el("div","kcol plan-col");
     const head=el("div","kcol-head");
@@ -2801,8 +3007,8 @@ function lotCard(l, stage, matchIds){
   }
   const head=el("div","lhead");
   head.innerHTML=`${l.order?`<span class="lnum">${l.order}</span>`:`<span class="ldot"></span>`}<span class="lname">${esc(l.name)}</span>${diffBadgeHtml(l)}`;
-  { const nm=head.querySelector(".lname"); if(nm){ nm.style.cursor="pointer"; nm.title="Ouvrir le lot"; nm.onclick=ev=>{ ev.stopPropagation(); openLotDetail(l.id); }; } }
-  head.appendChild(iconBtn("copy","","Copier le prompt à coller dans Claude Code ou ChatGPT",()=>copyLotPrompt(l)));
+  { const nm=head.querySelector(".lname"); if(nm){ nm.style.cursor="pointer"; nm.title=(l.id||"")+" — ouvrir le lot"; nm.onclick=ev=>{ ev.stopPropagation(); openLotDetail(l.id); }; } }
+  head.appendChild(iconBtn("clipboard","","Copier le prompt à coller dans Claude Code ou ChatGPT",()=>copyLotPrompt(l)));
   head.appendChild(iconBtn("archive","larch","Archiver ce lot (le range dans Archives ▸ Lots)",()=>archiveLot(l.id)));
   k.appendChild(head);
   if(l.goal){ const g=el("div","lgoal"); g.textContent=l.goal; k.appendChild(g); }
@@ -2956,6 +3162,7 @@ let lotListSort = null;   // { key, dir } tri par colonne de la vue « Liste des
 const lotListExpanded = new Set();   // ids des lots dépliés (arborescence des tickets, PS-038)
 const LOTLIST_COLS = [
   { key:"order", label:"#",        get:l=>l.order||999 },
+  { key:"id",    label:"ID",       get:l=>l.id||"" },
   { key:"name",  label:"Lot",      get:l=>(l.name||"").toLowerCase() },
   { key:"stage", label:"Étape",    get:l=>LOT_STAGES.indexOf(lotStage(l)) },
   { key:"diff",  label:"Diff.",    get:l=>diffRank(l) },
@@ -2971,7 +3178,7 @@ function renderLotList(c){
   const filtering = !!(f0.q || f0.dom || f0.type || f0.prio || f0.coder);
   const matchIds = filtering ? new Set(filteredRows({...f0, lot:"", stat:""}).map(e=>e.n)) : null;
   let lots=state.lots.filter(l=>!l.archived).slice().sort((a,b)=>(a.order||999)-(b.order||999));
-  if(filtering) lots=lots.filter(l=>lotEntries(l).some(e=>matchIds.has(e.n)));
+  if(filtering) lots=lots.filter(l=>lotMatchesQ(l,f0.q) || lotEntries(l).some(e=>matchIds.has(e.n)));
   if(!lots.length){
     const n=el("div","no-res");
     n.textContent = filtering ? "Aucun lot ne correspond à ces filtres." : "Aucun lot planifié pour l’instant.";
@@ -3009,24 +3216,40 @@ function renderLotList(c){
           cO.appendChild(grip);
           cO.appendChild(document.createTextNode(String(l.order||"—")));
           return cO; }
+        case "id":{ const c=el("td","c-id"); c.innerHTML=`<span class="id">${esc(l.id||"—")}</span>`; return c; }
         case "name":{
           const cN=el("td","t-lotname");
+          // ATL-060 : conteneur flex — sans lui, un nom clampé (max-width:100% de la cellule) ne tient pas
+          // à côté du bouton ▸ et retombe sur une 2e ligne : la cellule doublait de hauteur malgré le clamp.
+          const row=el("span","lotname-row");
           if(ents.length){
             const tw=el("button","lot-tw"); tw.type="button"; tw.textContent=open?"▾":"▸";
             tw.title=open?"Replier les tickets":`Déplier les ${ents.length} ticket${ents.length>1?"s":""}`;
             tw.onclick=ev=>{ ev.stopPropagation(); if(open) lotListExpanded.delete(l.id); else lotListExpanded.add(l.id); render(); };
-            cN.appendChild(tw);
+            row.appendChild(tw);
           } else cN.classList.add("no-tw");
           // PS-040 : le nom ouvre le pop-up détail du lot (comme depuis les cartes du Planning).
           // Sans conflit : ▸ stoppe la propagation, le drag ne part que de la poignée ⠿, le clic droit garde son menu.
-          const nm=el("span","lot-namelink"); nm.textContent=l.name; nm.title="Ouvrir le lot";
+          // ATL-060 : le nom est clampé (CSS .lot-namelink) — l'infobulle porte le nom complet, pas seulement l'id.
+          const nm=el("span","lot-namelink"); nm.textContent=l.name; nm.title=(l.name||"")+(l.id?" ("+l.id+")":"")+" — ouvrir le lot";
           nm.onclick=ev=>{ ev.stopPropagation(); openLotDetail(l.id); };
-          cN.appendChild(nm);
+          row.appendChild(nm);
+          cN.appendChild(row);
           return cN; }
-        case "stage":{ const c=el("td"); c.innerHTML=`<span class="lstage" style="color:${LOT_STAGE_COLOR[stage]}">${esc(stage)}</span>`; return c; }
+        case "stage":{ const c=el("td","t-stage"); c.innerHTML=`<span class="lstage" style="color:${LOT_STAGE_COLOR[stage]}">${esc(stage)}</span>`; return c; }
         case "diff":{ const c=el("td","t-diff"); c.innerHTML=diffBadgeHtml(l)||"—"; return c; }
-        case "goal":{ const c=el("td","t-goal"); c.textContent=l.goal||""; return c; }
-        case "tix":{ const c=el("td","t-tix"); c.textContent = ents.length ? `${ents.length} · ${ents.map(idStr).join(", ")}` : "—"; return c; }
+        case "goal":{
+          // ATL-060 : clamp 1 ligne (CSS .t-goal) ; le clic déplie la cellule pour lire l'objectif en entier.
+          const c=el("td","t-goal"); c.textContent=l.goal||"";
+          if(l.goal){ c.title=l.goal; c.onclick=()=>c.classList.toggle("expanded"); }
+          return c; }
+        case "tix":{
+          // ATL-060 : idem — la liste d'ID d'un lot chargé ne doit pas gonfler la ligne par défaut.
+          const c=el("td","t-tix");
+          const txt = ents.length ? `${ents.length} · ${ents.map(idStr).join(", ")}` : "—";
+          c.textContent=txt;
+          if(ents.length){ c.title=txt; c.onclick=()=>c.classList.toggle("expanded"); }
+          return c; }
         case "prios":{
           // PS-048 : répartition des priorités des tickets du lot (pastille + compteur, détail en infobulle).
           const c=el("td","t-prios");
@@ -3046,7 +3269,7 @@ function renderLotList(c){
           return cP; }
         case "act":{
           const cA=el("td","t-act");
-          cA.appendChild(iconBtn("copy","","Copier le prompt du lot à coller dans Claude Code ou ChatGPT",()=>copyLotPrompt(l)));
+          cA.appendChild(iconBtn("clipboard","","Copier le prompt du lot à coller dans Claude Code ou ChatGPT",()=>copyLotPrompt(l)));
           cA.appendChild(iconBtn("archive","","Archiver ce lot (le range dans Archives ▸ Lots)",()=>archiveLot(l.id)));
           if(stage===S_MERGED){ const b=el("button","btn sm build"); b.textContent="✓ "+DLV.participle; b.title="Marquer "+DLV.participle+dlvSuffix(); b.onclick=()=>markLotBuilt(l); cA.appendChild(b); }
           return cA; }
@@ -3174,8 +3397,8 @@ function updateNav(){
     sub.querySelectorAll("button").forEach(b=>b.classList.toggle("active", b.dataset.view===view)); }
 }
 function setView(v){
-  view=v; localStorage.setItem(NS("view"), v); closeFilterPop();
-  if(v==="archent" || v==="archlot"){ lastArchSubView=v; localStorage.setItem(NS("archSubView"), v); }
+  view=v; lsSet(NS("view"), v); closeFilterPop();
+  if(v==="archent" || v==="archlot"){ lastArchSubView=v; lsSet(NS("archSubView"), v); }
   filters=filtersByScope[scopeOf(v)];   // chaque famille de vues a ses propres filtres
   updateNav();
   if(v==="table" && !tableSort) tableSort = { key:"prio", dir:1 };
@@ -3209,21 +3432,17 @@ function updateStorageUI(){
   const dot=$("#storageDot"), lbl=$("#storageLabel"), btn=$("#connectBtn"), reload=$("#reloadBtn");
   btn.classList.remove("hidden"); reload.classList.remove("hidden");
   if(!fsaSupported()){ dot.className="dot warn"; lbl.textContent="Local (navigateur sans écriture)"; btn.classList.add("hidden"); reload.classList.add("hidden"); }
-  // Le nom reel du dossier, pas un libelle en dur : un dossier voisin choisi par
-  // erreur ecrivait un suivi.json a cote sous une pastille verte rassurante.
-  else if(dirHandle && dirReady){
-    const bon = dirHandle.name === ".claude";
-    dot.className = bon ? "dot ok" : "dot warn";
-    lbl.textContent = bon ? "Connecté à .claude" : "Connecté à « " + dirHandle.name + " » — ce n’est pas .claude";
-    btn.textContent="Reconnecter";
-  }
+  else if(dirHandle && dirReady){ dot.className="dot ok"; lbl.textContent="Connecté à .claude"; btn.textContent="Reconnecter"; }
   else if(dirHandle && !dirReady){ dot.className="dot warn"; lbl.textContent="Déconnecté — clique pour reconnecter"; btn.textContent="Reconnecter .claude"; }
   else { dot.className="dot"; lbl.textContent="Stockage local"; btn.textContent="Connecter .claude"; }
 }
 
 /* ---------- Migration / adoption ---------- */
 function adoptState(d){
-  state = Object.assign({ nextId:1, entries:[], categories:SEED_CATEGORIES.slice(), types:SEED_TYPES.slice(), lots:[], defaults:{} }, d);
+  state = Object.assign({ nextId:1, entries:[], categories:SEED_CATEGORIES.slice(), types:SEED_TYPES.slice(), lots:[], defaults:{}, socle:SOCLE_DEFAUT }, d);
+  // Un fichier antérieur au socle (SOCLE.md §4) le reçoit ici, dérivé de la config du projet :
+  // il est donc déclaré dès le premier enregistrement, sans saisie à la main.
+  if(!state.socle || typeof state.socle!=="object") state.socle = SOCLE_DEFAUT;
   if(!Array.isArray(state.categories) || !state.categories.length) state.categories = SEED_CATEGORIES.slice();
   if(!Array.isArray(state.types) || !state.types.length) state.types = SEED_TYPES.slice();
   if(!Array.isArray(state.lots)) state.lots = [];
@@ -3265,7 +3484,7 @@ function initTheme(){
   $("#themeBtn").onclick=()=>{
     const cur=document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
     const next=cur==="dark"?"light":"dark";
-    document.documentElement.setAttribute("data-theme",next); localStorage.setItem(NS("theme"),next);
+    document.documentElement.setAttribute("data-theme",next); lsSet(NS("theme"),next);
   };
 }
 
@@ -3290,7 +3509,7 @@ function wire(){
   $("#lotEditBtn").onclick=lotEnterEdit;
   $("#lotCancelBtn").onclick=lotCancel;
   $("#lotSaveBtn").onclick=lotSave;
-  $("#lotDupBtn").onclick=()=>{ const l=state.lots.find(x=>x.id===navKey); if(!l) return; const clone=JSON.parse(JSON.stringify(l)); clone.id="L"+Date.now().toString(36); clone.name=(l.name||"lot")+" (copie)"; delete clone.pr; delete clone.prState; delete clone.prUrl; delete clone.merged; delete clone.builtSw; delete clone.archived; state.lots.push(clone); rebuildDynamicSelects(); render(); scheduleSave(); openLotDetail(clone.id); };
+  $("#lotDupBtn").onclick=()=>{ const l=state.lots.find(x=>x.id===navKey); if(!l) return; const clone=JSON.parse(JSON.stringify(l)); clone.name=(l.name||"lot")+" (copie)"; clone.id=lotIdFromName(clone.name); delete clone.pr; delete clone.prState; delete clone.prUrl; delete clone.merged; delete clone.builtSw; delete clone.archived; state.lots.push(clone); rebuildDynamicSelects(); render(); scheduleSave(); openLotDetail(clone.id); };
   $("#lotArchBtn").onclick=()=>{ const l=state.lots.find(x=>x.id===navKey); if(!l) return; if(l.archived) unarchiveLot(l.id); else archiveLot(l.id); openLotDetail(navKey,{keep:true}); };
   $("#lotDelBtn").onclick=()=>{ const i=state.lots.findIndex(x=>x.id===navKey); if(i<0) return; const l=state.lots[i]; if(!confirm(`Supprimer le lot « ${l.name} » ? (les tickets ne sont pas supprimés)`)) return; deleteLot(i); closeDetail(); };
   $("#lotCloseBtn").onclick=closeDetail;
@@ -3365,7 +3584,7 @@ function wire(){
 
   // Nombre de colonnes (vue Cartes)
   document.querySelectorAll("#colsSwitch button").forEach(b=>b.onclick=()=>{
-    cardCols = +b.dataset.cols; localStorage.setItem(NS("cols"), cardCols);
+    cardCols = +b.dataset.cols; lsSet(NS("cols"), cardCols);
     document.querySelectorAll("#colsSwitch button").forEach(x=>x.classList.toggle("active", x===b));
     render();
   });
