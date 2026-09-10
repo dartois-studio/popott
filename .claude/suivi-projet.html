@@ -265,7 +265,6 @@
   /* Corbeille : bandeau d'en-tête de la sous-vue (compte + purge). */
   .trash-bar { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; flex-wrap: wrap; }
   .trash-bar .hint-sm { flex: 1; min-width: 220px; margin: 0; }
-  .trash-sec { font-size: 12px; font-weight: 700; color: var(--muted); margin: 14px 0 6px; }
   .date { color: var(--muted); font-size: 11.5px; }
   .entry-actions { margin-left: auto; display: flex; gap: 2px; }
 
@@ -766,12 +765,16 @@
           <button class="nav-tab lot" data-view="lotlist" title="Lots — liste">Lots <span class="nav-count" id="navCntLots"></span></button>
           <button class="nav-tab lot" data-view="plan" title="Lots — planning par étape de PR">Planning</button>
         </div>
-        <button class="nav-tab" id="navArchBtn" data-view="archent" title="Éléments rangés — archivés ou supprimés. Tout y est réversible.">🗄 Archives <span class="nav-count" id="navCntArch"></span></button>
+        <button class="nav-tab" id="navArchBtn" data-view="archent" title="Éléments rangés — c'est fini, on garde. Réversible : ↩ Désarchiver.">🗄 Archives <span class="nav-count" id="navCntArch"></span></button>
+        <button class="nav-tab" id="navTrashBtn" data-view="trashent" title="Éléments supprimés — restaurables tant que la corbeille n'est pas vidée">🗑 Corbeille <span class="nav-count" id="navCntTrash"></span></button>
       </div>
       <div class="segmented arch-sub" id="archSub" style="display:none">
         <button data-view="archent" class="active">☰ Tickets</button>
         <button data-view="archlot">☰ Lots</button>
-        <button data-view="trash" title="Éléments supprimés — restaurables tant que la corbeille n'est pas vidée">🗑 Corbeille</button>
+      </div>
+      <div class="segmented arch-sub" id="trashSub" style="display:none">
+        <button data-view="trashent" class="active">☰ Tickets</button>
+        <button data-view="trashlot">☰ Lots</button>
       </div>
     </div>
     <input class="ctrl search" id="qSearch" placeholder="Rechercher…">
@@ -906,7 +909,7 @@
       <li><b>4 vues</b> : Cartes, Liste, Kanban (glisse une carte d’une colonne à l’autre pour réaffecter la valeur de la colonne — statut par défaut), et <b>Planning</b>.</li>
       <li><b>Planning</b> : roadmap des lots. Chaque carte affiche les <b>IA utilisées</b> à partir de ses tickets. Les colonnes sont <b>déduites des PR GitHub</b> via <span class="k">sync-pr.ps1</span> : Planifié → En cours → En PR → {{stageMerged}} → {{stageDone}}. L’icône ⧉ copie le prompt à coller dans l’IA ; <b>« {{markBtn}} »</b> après {{checkPhrase}} passe le lot en {{stageDone}} et ses entrées en « Fait ».</li>
       <li><b>📌 Décisions</b> : chaque lot garde ses décisions validées (design, périmètre…) — Claude les note pendant les sessions, ou toi via <b>＋ décision</b> (au survol de la carte ; double-clic sur une décision pour la supprimer). Elles évitent de re-débattre un choix déjà tranché.</li>
-      <li><b>Ranger, abandonner, jeter</b> — trois gestes distincts. <b>🗄 Archiver</b> : c’est fini, je range (onglet <b>Archives</b>, réversible). <b>🚫 Abandonner</b> : on ne le fera pas, mais ça reste écrit. <b>🗑 Supprimer</b> : ça n’avait rien à faire là — l’élément part à la <b>Corbeille</b> (3<sup>e</sup> sous-onglet des Archives), d’où on le <b>restaure</b>. Rien n’est détruit tant que la corbeille n’est pas vidée, et c’est le seul endroit qui détruit pour de bon.</li>
+      <li><b>Ranger, abandonner, jeter</b> — trois gestes distincts. <b>🗄 Archiver</b> : c’est fini, je range (onglet <b>Archives</b>, réversible). <b>🚫 Abandonner</b> : on ne le fera pas, mais ça reste écrit. <b>🗑 Supprimer</b> : ça n’avait rien à faire là — l’élément part à la <b>Corbeille</b> (son propre onglet, à côté d’Archives, lui aussi partagé en Tickets / Lots), d’où on le <b>restaure</b>. Rien n’est détruit tant que la corbeille n’est pas vidée, et c’est le seul endroit qui détruit pour de bon.</li>
       <li><b>Pastille de stats</b> (en haut) : PR mergées sur 7 jours · cycle moyen création→{{participle}} · {{noun}}s en attente. Un clic ouvre un pop-up avec les graphiques détaillés (statuts, priorités, étapes des lots, tendance des PR mergées).</li>
       <li><b>Filtres</b> : recherche, catégorie, type, lot, priorité, statut et <b>Codé avec</b>. Filtre « En PR » = tout ce qui attend ton merge.</li>
       <li><b>Grouper par</b> : statut, catégorie, type, priorité, lot ou <b>Codé avec</b> — pilote les en-têtes de groupe (Cartes &amp; Liste) et les colonnes du Kanban.</li>
@@ -1069,7 +1072,7 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.1";
+const PAGE_VERSION = "1.2";
 const PAGE_VERSION_DATE = "2026-09-10";
 
 /* Dérivés de la config (ne pas éditer) */
@@ -1228,12 +1231,19 @@ function markSynced(m){
 }
 let dirty = false;       // vrai entre une modif locale et sa sauvegarde
 let view = "card";
-/* Les trois sous-vues de l'onglet Archives : tickets archivés, lots archivés, corbeille (ATL-080).
-   Un seul prédicat pour les quatre endroits qui demandaient « est-on dans les Archives ? » — la
-   sous-vue Corbeille en ajoutait un cinquième oubli possible à chaque fois. */
-const ARCH_VIEWS = ["archent","archlot","trash"];
-const isArchView = v => ARCH_VIEWS.includes(v);
-let lastArchSubView = (()=>{ const v=localStorage.getItem(NS("archSubView")); return isArchView(v) ? v : "archent"; })();   // sous-vue mémorisée dans l'onglet Archives
+/* Deux familles rangées, chacune un onglet de nav avec ses deux sous-onglets Tickets / Lots :
+   Archives (archent, archlot) et Corbeille (trashent, trashlot) — ATL-080, découpée par ATL-089.
+   `isRangedView` est le prédicat des endroits qui ne distinguent PAS les deux familles (filtres,
+   chips, écran « aucune entrée ») : ils traitent pareil ce qui est rangé, quel que soit le tiroir.
+   Ne pas y substituer `isArchView` : la Corbeille retomberait dans les filtres des vues vivantes. */
+const ARCH_VIEWS  = ["archent","archlot"];
+const TRASH_VIEWS = ["trashent","trashlot"];
+const isArchView  = v => ARCH_VIEWS.includes(v);
+const isTrashView = v => TRASH_VIEWS.includes(v);
+const isRangedView = v => isArchView(v) || isTrashView(v);
+const subViewMemo = (key, views, def) => { const v=localStorage.getItem(NS(key)); return views.includes(v) ? v : def; };
+let lastArchSubView  = subViewMemo("archSubView",  ARCH_VIEWS,  "archent");    // sous-onglet mémorisé, par famille
+let lastTrashSubView = subViewMemo("trashSubView", TRASH_VIEWS, "trashent");
 let sortKey = localStorage.getItem(NS("sort")) || "prio";   // tri de la vue Cartes (pilule dans le bandeau)
 let cardCols = 0;       // 0 = auto ; 1/2/3 = nombre de colonnes forcé en vue Cartes
 let dragCtx = null;      // { listKey } pendant un réordonnancement dans « gérer »
@@ -2116,7 +2126,7 @@ function delEntry(id){
   state.entries=state.entries.filter(x=>x.n!==id);
   state.trash.entries.unshift(e);
   rebuildDynamicSelects(); if(editingId===id) resetForm(); render(); scheduleSave();
-  toast("🗑 À la corbeille → "+idStr(e)+" · Archives ▸ Corbeille pour le restaurer.");
+  toast("🗑 À la corbeille → "+idStr(e)+" · onglet Corbeille ▸ Tickets pour le restaurer.");
 }
 function setStatus(id,val){
   const e=state.entries.find(x=>x.n===id);
@@ -2530,13 +2540,11 @@ function renderArchLots(c){
   }));
 }
 
-/* ---------- Vue Corbeille (ATL-080) : tickets et lots supprimés, dans un seul écran ----------
-   Deux tableaux empilés plutôt que deux sous-onglets de plus : la corbeille se lit d'un coup
-   d'œil (« qu'est-ce que j'ai jeté ? »), et elle est censée être vide la plupart du temps. */
-function renderTrash(c){
-  const q=(currentFilter().q||"").trim();
-  const ents=trashedEntries().filter(e=>archSearchMatch(q, idStr(e), e.title, e.dom));
-  const lots=trashedLots().filter(l=>archSearchMatch(q, l.name, l.goal));
+/* ---------- Vues Corbeille (ATL-080, découpée en deux sous-onglets par ATL-089) ----------
+   Même forme que les Archives : un sous-onglet Tickets, un sous-onglet Lots. La barre du haut est
+   rendue dans les deux — « Vider » emporte la corbeille ENTIÈRE, pas le sous-onglet courant : son
+   libellé porte donc le total des deux, et son infobulle le dit. */
+function trashBar(c){
   const bar=el("div","trash-bar");
   const hint=el("div","hint-sm");
   hint.innerHTML = trashCount()
@@ -2545,50 +2553,60 @@ function renderTrash(c){
   bar.appendChild(hint);
   if(trashCount()){
     const vider=el("button","btn sm danger"); vider.textContent=`🗑 Vider la corbeille (${trashCount()})`;
-    vider.title="Supprime définitivement tout ce que contient la corbeille";
+    vider.title="Supprime définitivement TOUT ce que contient la corbeille — les tickets ET les lots, les deux sous-onglets";
     vider.onclick=emptyTrashNow; bar.appendChild(vider);
   }
   c.appendChild(bar);
-  if(!ents.length && !lots.length){
+}
+function renderTrashEntries(c){
+  trashBar(c);
+  const q=(currentFilter().q||"").trim();
+  const ents=trashedEntries().filter(e=>archSearchMatch(q, idStr(e), e.title, e.dom));
+  if(!ents.length){
     const n=el("div","no-res");
-    n.textContent = q ? "Rien dans la corbeille ne correspond à la recherche."
-                      : "Corbeille vide. Supprime un ticket ou un lot pour le ranger ici — il restera restaurable.";
+    n.textContent = q ? "Aucun ticket supprimé ne correspond à la recherche."
+                      : "Aucun ticket à la corbeille. Supprime un ticket pour le ranger ici — il restera restaurable.";
     c.appendChild(n); return;
   }
-  if(ents.length){
-    const t=el("div","trash-sec"); t.textContent=`Tickets supprimés (${ents.length})`; c.appendChild(t);
-    c.appendChild(archTable(TRASH_ENT_COLS, ents, "trashent", e=>{
-      const tr=el("tr","done");
-      const cId=el("td","c-id"); cId.innerHTML=`<span class="id">${idStr(e)}</span>`;
-      const cTi=el("td","t-title"); cTi.textContent=e.title||"(sans titre)";
-      const cCa=el("td"); cCa.textContent=e.dom||"—";
-      const cLo=el("td"); cLo.innerHTML=e.lot?`<span class="badge lot">◧ ${esc(lotName(e.lot)||e.lot)}</span>`:'<span class="cam">—</span>';
-      const cPr=el("td"); cPr.innerHTML=`<span class="badge prio ${e.prio}">${e.prio}</span>`;
-      const cDe=el("td","cam"); cDe.textContent=fmtDate(e.deleted);
-      const cAc=el("td"); cAc.style.whiteSpace="nowrap";
-      const un=el("button","btn sm"); un.textContent="↩ Restaurer"; un.onclick=()=>restoreEntry(e.n);
-      cAc.append(un, iconBtn("trash","danger","Supprimer définitivement",()=>purgeEntry(e.n)));
-      tr.append(cId,cTi,cCa,cLo,cPr,cDe,cAc);
-      return tr;
-    }));
+  c.appendChild(archTable(TRASH_ENT_COLS, ents, "trashent", e=>{
+    const tr=el("tr","done");
+    const cId=el("td","c-id"); cId.innerHTML=`<span class="id">${idStr(e)}</span>`;
+    const cTi=el("td","t-title"); cTi.textContent=e.title||"(sans titre)";
+    const cCa=el("td"); cCa.textContent=e.dom||"—";
+    const cLo=el("td"); cLo.innerHTML=e.lot?`<span class="badge lot">◧ ${esc(lotName(e.lot)||e.lot)}</span>`:'<span class="cam">—</span>';
+    const cPr=el("td"); cPr.innerHTML=`<span class="badge prio ${e.prio}">${e.prio}</span>`;
+    const cDe=el("td","cam"); cDe.textContent=fmtDate(e.deleted);
+    const cAc=el("td"); cAc.style.whiteSpace="nowrap";
+    const un=el("button","btn sm"); un.textContent="↩ Restaurer"; un.onclick=()=>restoreEntry(e.n);
+    cAc.append(un, iconBtn("trash","danger","Supprimer définitivement",()=>purgeEntry(e.n)));
+    tr.append(cId,cTi,cCa,cLo,cPr,cDe,cAc);
+    return tr;
+  }));
+}
+function renderTrashLots(c){
+  trashBar(c);
+  const q=(currentFilter().q||"").trim();
+  const lots=trashedLots().filter(l=>archSearchMatch(q, l.name, l.goal));
+  if(!lots.length){
+    const n=el("div","no-res");
+    n.textContent = q ? "Aucun lot supprimé ne correspond à la recherche."
+                      : "Aucun lot à la corbeille. Supprime un lot depuis la Liste des lots ou son pop-up — ses tickets sont détachés sur le coup, et rattachés à la restauration.";
+    c.appendChild(n); return;
   }
-  if(lots.length){
-    const t=el("div","trash-sec"); t.textContent=`Lots supprimés (${lots.length})`; c.appendChild(t);
-    c.appendChild(archTable(TRASH_LOT_COLS, lots, "trashlot", l=>{
-      const stage=lotStage(l), tix=l.deletedTickets||[];
-      const tr=el("tr","lotrow done");
-      const cO=el("td","t-num"); cO.textContent=l.order||"—";
-      const cN=el("td","t-lotname"); cN.textContent=l.name; cN.title=l.id||"";
-      const cS=el("td"); cS.innerHTML=`<span class="lstage" style="color:${LOT_STAGE_COLOR[stage]||'var(--muted)'}">${esc(stage)}</span>`;
-      const cT=el("td","t-tix"); cT.textContent = tix.length ? `${tix.length} · rattachés à la restauration` : "—";
-      const cDe=el("td","cam"); cDe.textContent=fmtDate(l.deleted);
-      const cAc=el("td","t-act"); cAc.style.whiteSpace="nowrap";
-      const un=el("button","btn sm"); un.textContent="↩ Restaurer"; un.onclick=()=>restoreLot(l.id);
-      cAc.append(un, iconBtn("trash","danger","Supprimer définitivement",()=>purgeLot(l.id)));
-      tr.append(cO,cN,cS,cT,cDe,cAc);
-      return tr;
-    }));
-  }
+  c.appendChild(archTable(TRASH_LOT_COLS, lots, "trashlot", l=>{
+    const stage=lotStage(l), tix=l.deletedTickets||[];
+    const tr=el("tr","lotrow done");
+    const cO=el("td","t-num"); cO.textContent=l.order||"—";
+    const cN=el("td","t-lotname"); cN.textContent=l.name; cN.title=l.id||"";
+    const cS=el("td"); cS.innerHTML=`<span class="lstage" style="color:${LOT_STAGE_COLOR[stage]||'var(--muted)'}">${esc(stage)}</span>`;
+    const cT=el("td","t-tix"); cT.textContent = tix.length ? `${tix.length} · rattachés à la restauration` : "—";
+    const cDe=el("td","cam"); cDe.textContent=fmtDate(l.deleted);
+    const cAc=el("td","t-act"); cAc.style.whiteSpace="nowrap";
+    const un=el("button","btn sm"); un.textContent="↩ Restaurer"; un.onclick=()=>restoreLot(l.id);
+    cAc.append(un, iconBtn("trash","danger","Supprimer définitivement",()=>purgeLot(l.id)));
+    tr.append(cO,cN,cS,cT,cDe,cAc);
+    return tr;
+  }));
 }
 
 /* ---------- Colonnes affichées (choisir quelles colonnes/groupes sont visibles) ---------- */
@@ -2654,7 +2672,7 @@ function renderTableColsMgr(){
 function syncFilters(){
   const v=view;
   const roadmap = (v==="plan" || v==="lotlist");   // vues « lots » : les filtres lot/statut n'ont pas de sens
-  const archive = isArchView(v);                  // vues Archives + Corbeille : ni groupement ni menu d'affichage
+  const archive = isRangedView(v);                // vues Archives + Corbeille : ni groupement ni menu d'affichage
   const set=(id,on)=>{ const el=$("#"+id); if(el) el.style.display = on?"":"none"; };
   set("wrapDisplay", !archive && v!=="plan");     // menu Affichage : tickets + Liste des lots (PS-043) ; le Planning a le sien
   set("wrapPlanDisplay", v==="plan"); // menu Affichage (Planning) : uniquement en Planning
@@ -2809,7 +2827,7 @@ function deleteLot(i){
   state.lots.splice(i,1);
   state.trash.lots.unshift(lot);
   rebuildManageLists(); rebuildDynamicSelects(); render(); scheduleSave();
-  toast("🗑 À la corbeille → lot « "+lot.name+" »"+(lot.deletedTickets.length?` · ${lot.deletedTickets.length} ticket(s) détaché(s), rattachés à la restauration.`:""));
+  toast("🗑 À la corbeille → lot « "+lot.name+" » · onglet Corbeille ▸ Lots pour le restaurer."+(lot.deletedTickets.length?` ${lot.deletedTickets.length} ticket(s) détaché(s), rattachés à la restauration.`:""));
 }
 
 /* ---------- Filtre + tri ---------- */
@@ -2885,7 +2903,7 @@ function makeFilterPill(f, i){
 function renderFilterChips(){
   const box=$("#filterChips"); if(!box) return;
   box.innerHTML="";
-  if(isArchView(view)){                       // Archives et Corbeille : seule la recherche s'applique (tri par colonnes)
+  if(isRangedView(view)){                     // Archives et Corbeille : seule la recherche s'applique (tri par colonnes)
     const q=$("#qSearch").value.trim();
     if(q) box.appendChild(makeSearchChip(q));
     box.style.display = q ? "" : "none";
@@ -3008,7 +3026,7 @@ function render(){
 
   // ATL-080 — l'écran « aucune entrée » ne doit JAMAIS masquer les Archives ni la Corbeille :
   // sinon, supprimer le dernier ticket enfermait la seule porte pour le restaurer.
-  const archiveView = isArchView(view);
+  const archiveView = isRangedView(view);
   if(state.entries.length===0 && !archiveView){ $("#empty").classList.remove("hidden"); c.classList.add("hidden"); }
   else { $("#empty").classList.add("hidden"); c.classList.remove("hidden"); }
 
@@ -3017,7 +3035,8 @@ function render(){
     else if(view==="lotlist") renderLotList(c);
     else if(view==="archent") renderArchEntries(c);
     else if(view==="archlot") renderArchLots(c);
-    else if(view==="trash") renderTrash(c);
+    else if(view==="trashent") renderTrashEntries(c);
+    else if(view==="trashlot") renderTrashLots(c);
     else if(view==="kanban") renderKanban(c, rows);
     else if(view==="table") renderTable(c, sortRows(rows,f));
     else renderCards(c, rows, f);
@@ -3033,9 +3052,12 @@ function render(){
   } else if(view==="archlot"){
     const n=archivedLots().length;
     $("#countPill").textContent=`${n} lot${n>1?"s":""} archivé${n>1?"s":""}`;
-  } else if(view==="trash"){
-    const n=trashCount();
-    $("#countPill").textContent = n ? `${n} élément${n>1?"s":""} à la corbeille` : "corbeille vide";
+  } else if(view==="trashent"){
+    const n=trashedEntries().length;
+    $("#countPill").textContent = n ? `${n} ticket${n>1?"s":""} à la corbeille` : "aucun ticket à la corbeille";
+  } else if(view==="trashlot"){
+    const n=trashedLots().length;
+    $("#countPill").textContent = n ? `${n} lot${n>1?"s":""} à la corbeille` : "aucun lot à la corbeille";
   } else {
     const total=state.entries.filter(e=>!e.archived).length;
     $("#countPill").textContent=`${rows.length} / ${total} entrée${total>1?"s":""}`;
@@ -3050,7 +3072,8 @@ function updateNavCounts(){
   const set=(id,n)=>{ const s=$("#"+id); if(s) s.textContent=n; };
   set("navCntTix",  state.entries.filter(e=>!e.archived).length);
   set("navCntLots", state.lots.filter(l=>!l.archived).length);
-  set("navCntArch", archivedEntries().length + archivedLots().length + trashCount());
+  set("navCntArch",  archivedEntries().length + archivedLots().length);   // ATL-089 : la corbeille a son onglet,
+  set("navCntTrash", trashCount());                                       // elle ne se compte donc plus dans Archives
 }
 
 function groupHead(g, count){
@@ -3677,6 +3700,11 @@ function renderLotList(c){
           const cA=el("td","t-act");
           cA.appendChild(iconBtn("clipboard","","Copier le prompt du lot à coller dans Claude Code ou ChatGPT",()=>copyLotPrompt(l)));
           cA.appendChild(iconBtn("archive","","Archiver ce lot (le range dans Archives ▸ Lots)",()=>archiveLot(l.id)));
+          // ATL-089 : même geste que sur une ligne de ticket. Sans lui, jeter un lot obligeait à ouvrir
+          // son pop-up d'abord — les actions du pop-up disparaissent en mode Édition, donc le geste
+          // n'était visible que dans un état sur deux.
+          cA.appendChild(iconBtn("trash","danger","Supprimer ce lot (le range à la Corbeille, restaurable)",
+            ()=>deleteLot(state.lots.findIndex(x=>x.id===l.id))));
           if(stage===S_MERGED){ const b=el("button","btn sm build"); b.textContent="✓ "+DLV.participle; b.title="Marquer "+DLV.participle+dlvSuffix(); b.onclick=()=>markLotBuilt(l); cA.appendChild(b); }
           return cA; }
         default: return el("td");
@@ -3793,18 +3821,22 @@ function openStats(){
 
 /* ---------- Vue : sélecteur ---------- */
 function updateNav(){
-  const archive = isArchView(view);
+  const archive = isArchView(view), trash = isTrashView(view);
   document.querySelectorAll("#viewSwitch .nav-tab").forEach(b=>{
     const dv=b.dataset.view;
-    b.classList.toggle("active", dv===view || (dv==="archent" && archive));
+    b.classList.toggle("active", dv===view || (dv==="archent" && archive) || (dv==="trashent" && trash));
   });
-  const sub=$("#archSub");
-  if(sub){ sub.style.display = archive ? "" : "none";
-    sub.querySelectorAll("button").forEach(b=>b.classList.toggle("active", b.dataset.view===view)); }
+  // Une barre de sous-onglets par famille ; seule celle de la famille active est montrée.
+  [[$("#archSub"), archive], [$("#trashSub"), trash]].forEach(([sub,on])=>{
+    if(!sub) return;
+    sub.style.display = on ? "" : "none";
+    sub.querySelectorAll("button").forEach(b=>b.classList.toggle("active", b.dataset.view===view));
+  });
 }
 function setView(v){
   view=v; lsSet(NS("view"), v); closeFilterPop();
-  if(isArchView(v)){ lastArchSubView=v; lsSet(NS("archSubView"), v); }
+  if(isArchView(v)){  lastArchSubView=v;  lsSet(NS("archSubView"),  v); }
+  if(isTrashView(v)){ lastTrashSubView=v; lsSet(NS("trashSubView"), v); }
   filters=filtersByScope[scopeOf(v)];   // chaque famille de vues a ses propres filtres
   updateNav();
   if(v==="table" && !tableSort) tableSort = { key:"prio", dir:1 };
@@ -4008,7 +4040,8 @@ function wire(){
 
   // Sélecteur de vue
   document.querySelectorAll("#viewSwitch button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
-  $("#navArchBtn").onclick=()=>setView(lastArchSubView);   // rouvre Archives sur le dernier sous-onglet (Tickets/Lots) visité
+  $("#navArchBtn").onclick=()=>setView(lastArchSubView);     // rouvre chaque famille sur son dernier
+  $("#navTrashBtn").onclick=()=>setView(lastTrashSubView);   // sous-onglet (Tickets/Lots) visité
 
   // Création rapide de lot depuis le formulaire
   $("#fLot").addEventListener("change",()=>{
@@ -4107,6 +4140,7 @@ async function boot(){
   try { const raw=localStorage.getItem(LS_KEY); if(raw){ const d=JSON.parse(raw); if(d.entries) adoptState(d); } } catch(e){}
   view = localStorage.getItem(NS("view")) || "table";
   if(view==="card" || view==="kanban") view="table";   // Cartes/Kanban retirés → repli sur Liste
+  if(view==="trash") view="trashent";                  // ATL-089 : vue mémorisée avant le découpage de la Corbeille
   cardCols = +(localStorage.getItem(NS("cols")) || 0) || 0;
   document.querySelectorAll("#colsSwitch button").forEach(b=>b.classList.toggle("active", +b.dataset.cols===cardCols));
   if(fsaSupported()){
