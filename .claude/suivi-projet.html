@@ -1072,7 +1072,7 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.3";
+const PAGE_VERSION = "1.4";
 const PAGE_VERSION_DATE = "2026-09-11";
 
 /* Dérivés de la config (ne pas éditer) */
@@ -1322,8 +1322,15 @@ const pad = n => String(n).padStart(3,"0");
 const idStr = e => PROJECT.prefix + "-" + pad(e.n);
 const nowISO = () => new Date().toISOString();
 const todayISO = nowISO; // conservé pour compat — horodate désormais avec l'heure
+/* ATL-090 : `archived` et `deleted` doivent porter un horodatage ISO, mais une écriture à la
+   main en a déjà fait des booléens (34 sur Sable, 2 sur l'Atelier). Trier dessus levait
+   `TypeError: localeCompare is not a function`, ce qui interrompait boot() AVANT
+   updateStorageUI() : plus d'onglet Archives, et « Connecter .claude » muet. La page ne doit
+   pas tomber sur une donnée mal typée — elle la range en fin de tri et n'en affiche pas de date. */
+const dateKey = v => typeof v === "string" ? v : "";
 const fmtDate = iso => { try {
     if(!iso) return iso;
+    if(typeof iso !== "string") return ""; // ATL-090 : un booléen donnerait « 01 janv. 1970 »
     const hasTime = /T\d\d:\d\d/.test(iso);
     const d = new Date(iso);
     return hasTime
@@ -2265,7 +2272,7 @@ function unarchiveEntry(id){
   e.archived=""; e.updated=todayISO();
   render(); scheduleSave(); toast("Désarchivé → "+idStr(e));
 }
-function archivedEntries(){ return state.entries.filter(e=>e.archived).sort((a,b)=>(b.archived||"").localeCompare(a.archived||"")||b.n-a.n); }
+function archivedEntries(){ return state.entries.filter(e=>e.archived).sort((a,b)=>dateKey(b.archived).localeCompare(dateKey(a.archived))||b.n-a.n); }
 /* Lots : une carte de Planning EST un lot — même geste d'archivage, rangé dans l'onglet « Lots ». */
 let archiveLotCtx=null;
 function archiveLot(id){
@@ -2333,7 +2340,7 @@ function confirmUnarchiveLot(){
   render(); scheduleSave();
   toast(n? `Lot désarchivé → ${l.name} (+${n} ticket${n>1?"s":""})` : "Lot désarchivé → "+l.name);
 }
-function archivedLots(){ return state.lots.filter(l=>l.archived).sort((a,b)=>(b.archived||"").localeCompare(a.archived||"")||(a.order||999)-(b.order||999)); }
+function archivedLots(){ return state.lots.filter(l=>l.archived).sort((a,b)=>dateKey(b.archived).localeCompare(dateKey(a.archived))||(a.order||999)-(b.order||999)); }
 
 /* ---------- Corbeille (ATL-080) : restaurer, purger ----------
    Archiver et supprimer ne disent pas la même chose et ne se rangent donc pas au même endroit :
@@ -2341,8 +2348,8 @@ function archivedLots(){ return state.lots.filter(l=>l.archived).sort((a,b)=>(b.
    d'archivage) ; 🗑 Supprimer = « ça n'a rien à faire là » (l'élément sort de state pour la
    corbeille). La corbeille est la 3e sous-vue de l'onglet Archives, et elle est la SEULE porte
    vers la destruction définitive. */
-function trashedEntries(){ return state.trash.entries.slice().sort((a,b)=>(b.deleted||"").localeCompare(a.deleted||"")||b.n-a.n); }
-function trashedLots(){ return state.trash.lots.slice().sort((a,b)=>(b.deleted||"").localeCompare(a.deleted||"")||(a.order||999)-(b.order||999)); }
+function trashedEntries(){ return state.trash.entries.slice().sort((a,b)=>dateKey(b.deleted).localeCompare(dateKey(a.deleted))||b.n-a.n); }
+function trashedLots(){ return state.trash.lots.slice().sort((a,b)=>dateKey(b.deleted).localeCompare(dateKey(a.deleted))||(a.order||999)-(b.order||999)); }
 function trashCount(){ return state.trash.entries.length + state.trash.lots.length; }
 function restoreEntry(n){
   const i=state.trash.entries.findIndex(x=>x.n===n); if(i<0) return;
