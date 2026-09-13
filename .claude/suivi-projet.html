@@ -1072,8 +1072,8 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.4";
-const PAGE_VERSION_DATE = "2026-09-11";
+const PAGE_VERSION = "1.5";
+const PAGE_VERSION_DATE = "2026-09-14";
 
 /* Dérivés de la config (ne pas éditer) */
 const DLV = PROJECT.delivery;
@@ -1863,11 +1863,27 @@ function gainStr(g){
 }
 
 /* ---------- Génération du Markdown ---------- */
+
+/* ATL-024 — CETTE PAGE EST LE SECOND ÉCRIVAIN DE `suivi.md`, elle doit se nommer comme le
+   premier. `generate-suivi.ps1` signe son en-tête « par `.claude\generate-suivi.ps1` » ;
+   sans signature ici, une simple sauvegarde depuis l'interface rendait la vue muette sur son
+   producteur, et `tools/donnee.js` la reclassait « écrite à la main » (mesuré le 02/09/2026).
+   Le nom se RELÈVE, il ne s'écrit pas en dur : le tracker de Sable s'appelle
+   `suivi-projet-sable.html`. On garde les deux derniers segments du chemin — dossier + fichier,
+   la forme que `donnee.js` reconnaît. */
+function producteurPage(){
+  try{
+    const seg = decodeURIComponent(location.pathname).split(/[\/\\]/).filter(Boolean);
+    if(!seg.length) return "suivi-projet.html";
+    return seg.slice(-2).join("\\");
+  }catch(e){ return "suivi-projet.html"; }
+}
+
 function buildMarkdown(capMap){
   capMap = capMap || {};
   const L = [];
   L.push("# Suivi " + PROJECT.name, "");
-  L.push(`_Généré le ${new Date().toLocaleString('fr-FR')}. Source de vérité : \`suivi.json\` — ne pas éditer ce .md à la main._`,"");
+  L.push(`_Généré le ${new Date().toLocaleString('fr-FR')} par \`${producteurPage()}\`. Source de vérité : \`suivi.json\` — ne pas éditer ce .md à la main._`,"");
   L.push('_Convention : au terme du code, l’IA renseigne `codedWith` sur chaque ticket avec `Claude Code`, `ChatGPT`, `Mixte` ou le nom exact de toute autre IA avant tout passage à `Fait`._',"");
 
   L.push("## Résumé","");
