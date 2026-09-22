@@ -358,7 +358,18 @@ function Write-SuiviActif([string]$Path) {
     $pl = PrLabel $l; if ($pl) { $meta += $pl }
     $meta += '{0} ticket(s) ouvert(s)' -f @($open | Where-Object { [string]$_.lot -eq [string]$l.id }).Count
     $head += ('_' + ($meta -join ' · ') + '_')
-    if ($l.goal) { $head += ('But : ' + $l.goal) }
+    # ATL-160 — un lot classe 'ouvert' (Planifié) n'a aucun ticket commencé : son « But », souvent
+    # plusieurs centaines d'octets de prose, ne vaut pas d'être JAMAIS COUPÉ au même titre qu'un
+    # lot en-travail. Il se réduit à un renvoi d'une ligne ; ses décisions, elles, restent — c'est
+    # ce qu'impose la règle 8 du CLAUDE.md (« relire les décisions avant de proposer une approche »)
+    # y compris sur un lot pas encore démarré.
+    if ($l.goal) {
+      if ((ClasseLot $l) -eq 'ouvert') {
+        $head += ('_But : pas commencé — dans `suivi.json`, lot ' + [string]$l.id + '._')
+      } else {
+        $head += ('But : ' + $l.goal)
+      }
+    }
     $blocks += , [pscustomobject]@{
       Id = [string]$l.id; Head = @($head); Decs = @(@($l.decisions) | Where-Object { $_ })
       Keep = @(); Omit = ''; Reserve = 0
