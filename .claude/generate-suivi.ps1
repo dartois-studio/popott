@@ -142,6 +142,11 @@ function CoderLabel($o) {
   if ($o.PSObject.Properties['codedWith'] -and $o.codedWith) { return [string]$o.codedWith }
   return ''
 }
+# ATL-161 — le modèle derrière l'outil ; facultatif, '' si absent.
+function ModelLabel($o) {
+  if ($o.PSObject.Properties['model'] -and $o.model) { return [string]$o.model }
+  return ''
+}
 # Libellé PR compact : "PR #285 (mergée le 2026-07-09)" / "(ouverte)" / "(fermée sans merge)" — '' si pas de PR
 function PrLabel($o) {
   if (-not $o.pr) { return '' }
@@ -548,6 +553,7 @@ foreach ($g in $groups) {
   foreach ($e in $rows) {
     $line = "- $(IdStr $e) · $($e.prio) · **$($e.stat)** · _$($e.type)_ — $($e.title)"
     $coder = CoderLabel $e; if ($coder) { $line += " · Codé avec **$coder**" }
+    $model = ModelLabel $e; if ($model) { $line += " · Modèle **$model**" }
     $pl = PrLabel $e; if ($pl) { $line += " · $pl" }
     $out.Add($line)
   }
@@ -573,6 +579,7 @@ foreach ($s in $STATS) {
     $sub = "créé le $($e.created)"
     if ($e.updated -and $e.updated -ne $e.created) { $sub += " · maj $($e.updated)" }
     $coder = CoderLabel $e; if ($coder) { $sub += " · Codé avec $coder" }
+    $model = ModelLabel $e; if ($model) { $sub += " · Modèle $model" }
     $pl = PrLabel $e; if ($pl) { $sub += " · $pl" }
     if ($e.branch) { $sub += ' · branche `' + $e.branch + '`' }
     if ($e.builtSw) { $sub += " · $Participle le $($e.builtSw)" }

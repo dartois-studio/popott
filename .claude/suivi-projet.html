@@ -691,6 +691,12 @@
         </datalist>
         <div class="hint">L’IA remplit normalement cette information. Utilise ce champ seulement pour corriger un oubli ou indiquer une autre IA.</div>
       </div>
+      <div class="field">
+        <label>Modèle — facultatif</label>
+        <input class="ctrl" id="fModel" list="modelSuggestions" placeholder="Ex. : Opus 5.5, Sonnet 5…">
+        <datalist id="modelSuggestions"></datalist>
+        <div class="hint">Le modèle derrière l’outil. Plusieurs modèles sur le même ticket : « Mixte ». Vide = inconnu.</div>
+      </div>
     </div>
     <div class="row2">
       <div class="field">
@@ -791,6 +797,7 @@
               <option value="prio">Priorité</option>
               <option value="lot">Lot</option>
               <option value="coder">Codé avec</option>
+              <option value="model">Modèle</option>
             </select>
           </div>
           <div class="fp-row" id="colToggles"><label>Colonnes affichées</label><div id="colTogglesList"></div></div>
@@ -911,8 +918,8 @@
       <li><b>📌 Décisions</b> : chaque lot garde ses décisions validées (design, périmètre…) — Claude les note pendant les sessions, ou toi via <b>＋ décision</b> (au survol de la carte ; double-clic sur une décision pour la supprimer). Elles évitent de re-débattre un choix déjà tranché.</li>
       <li><b>Ranger, abandonner, jeter</b> — trois gestes distincts. <b>🗄 Archiver</b> : c’est fini, je range (onglet <b>Archives</b>, réversible). <b>🚫 Abandonner</b> : on ne le fera pas, mais ça reste écrit. <b>🗑 Supprimer</b> : ça n’avait rien à faire là — l’élément part à la <b>Corbeille</b> (son propre onglet, à côté d’Archives, lui aussi partagé en Tickets / Lots), d’où on le <b>restaure</b>. Rien n’est détruit tant que la corbeille n’est pas vidée, et c’est le seul endroit qui détruit pour de bon.</li>
       <li><b>Pastille de stats</b> (en haut) : PR mergées sur 7 jours · cycle moyen création→{{participle}} · {{noun}}s en attente. Un clic ouvre un pop-up avec les graphiques détaillés (statuts, priorités, étapes des lots, tendance des PR mergées).</li>
-      <li><b>Filtres</b> : recherche, catégorie, type, lot, priorité, statut et <b>Codé avec</b>. Filtre « En PR » = tout ce qui attend ton merge.</li>
-      <li><b>Grouper par</b> : statut, catégorie, type, priorité, lot ou <b>Codé avec</b> — pilote les en-têtes de groupe (Cartes &amp; Liste) et les colonnes du Kanban.</li>
+      <li><b>Filtres</b> : recherche, catégorie, type, lot, priorité, statut, <b>Codé avec</b> et <b>Modèle</b>. Filtre « En PR » = tout ce qui attend ton merge.</li>
+      <li><b>Grouper par</b> : statut, catégorie, type, priorité, lot, <b>Codé avec</b> ou <b>Modèle</b> — pilote les en-têtes de groupe (Cartes &amp; Liste) et les colonnes du Kanban.</li>
       <li><b>Tri</b> (Cartes) : priorité, récent, catégorie. En Liste, clique les en-têtes de colonnes.</li>
       <li><b>Colonnes</b> (Cartes) : Auto / 1 / 2 / 3. <b>Dupliquer</b> : l’icône ⧉ sur chaque carte ou ligne crée une copie.</li>
     </ul>
@@ -1072,8 +1079,8 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.5";
-const PAGE_VERSION_DATE = "2026-09-14";
+const PAGE_VERSION = "1.6";
+const PAGE_VERSION_DATE = "2026-09-23";
 
 /* Dérivés de la config (ne pas éditer) */
 const DLV = PROJECT.delivery;
@@ -1166,11 +1173,17 @@ function extKvHtml(o, portee){
 const CODERS  = ["", ...PROJECT.coders];
 const CODER_LABEL = Object.assign({ "":"Non renseigné" }, ...PROJECT.coders.map(c=>({[c]:c})));
 const CODER_FILTER_LABEL = Object.assign({ "":"Tous les outils de code", "__none__":"Non renseigné" }, ...PROJECT.coders.map(c=>({[c]:c})));
+/* ATL-161 — le MODÈLE derrière l'outil (`model`), à côté de `codedWith` qui dit l'outil. Facultatif,
+   jamais exigé avant Fait. La liste vit ici, hors du bloc CONFIG, pour arriver dans chaque dépôt
+   par la propagation ; un dépôt peut la remplacer par `PROJECT.models`. Toute autre valeur écrite
+   dans le fichier s'ajoute d'elle-même aux filtres (allModelValues), comme pour « Codé avec ». */
+const MODELS = Array.isArray(PROJECT.models) ? PROJECT.models : ["Opus 5.5", "Opus 5", "Sonnet 5", "Haiku 4.5", "Fable 5.1", "Mixte"];
+const modelLabel = v => v || "Non renseigné";
 const prioRank = p => PRIOS.indexOf(p);
 
 /* Filtres façon Notion : liste ordonnée de {key, op, values}. Une pilule par propriété. */
-const FILTER_KEYS = ["dom","type","lot","prio","stat","coder"];
-const FILTER_LABEL = { dom:"Catégorie", type:"Type", lot:"Lot", prio:"Priorité", stat:"Statut", coder:"Codé avec" };
+const FILTER_KEYS = ["dom","type","lot","prio","stat","coder","model"];
+const FILTER_LABEL = { dom:"Catégorie", type:"Type", lot:"Lot", prio:"Priorité", stat:"Statut", coder:"Codé avec", model:"Modèle" };
 function normFilters(a){
   if(Array.isArray(a)){
     return a.filter(f=>f && FILTER_KEYS.includes(f.key))
@@ -1345,6 +1358,10 @@ function allCoderValues(){
   const custom=[...new Set(state.entries.map(e=>e.codedWith).filter(v=>v && !known.includes(v)))].sort((a,b)=>a.localeCompare(b,"fr"));
   return [...known,...custom];
 }
+function allModelValues(){
+  const custom=[...new Set(state.entries.map(e=>e.model).filter(v=>v && !MODELS.includes(v)))].sort((a,b)=>a.localeCompare(b,"fr"));
+  return [...MODELS,...custom];
+}
 function coderBadgeHtml(v, full){
   if(!v) return "";
   const label = full ? `Codé avec ${coderLabel(v)}` : coderLabel(v);
@@ -1462,7 +1479,7 @@ async function reconcileWithDisk(){
 
 /* ---------- Diff local ↔ disque ---------- */
 const CMP_FIELDS = [["title","Titre"],["desc","Description"],["type","Type"],["dom","Catégorie"],
-                    ["lot","Lot"],["prio","Priorité"],["stat","Statut"],["codedWith","Codé avec"]];
+                    ["lot","Lot"],["prio","Priorité"],["stat","Statut"],["codedWith","Codé avec"],["model","Modèle"]];
 function byId(s){ const m={}; (s.entries||[]).forEach(e=>m[e.n]=e); return m; }
 function diffStates(local, disk){
   const A = byId(local), B = byId(disk);
@@ -1900,7 +1917,7 @@ function buildMarkdown(capMap){
     if(!rows.length) continue;
     L.push(`### ${g.name} — ${rows.length}`);
     for(const e of rows){
-      const coded = e.codedWith ? ` · Codé avec **${coderLabel(e.codedWith)}**` : "";
+      const coded = (e.codedWith ? ` · Codé avec **${coderLabel(e.codedWith)}**` : "") + (e.model ? ` · Modèle **${e.model}**` : "");
       L.push(`- ${idStr(e)} · ${e.prio} · **${e.stat}** · _${e.type}_ — ${e.title}${coded}`);
     }
     L.push("");
@@ -1922,7 +1939,7 @@ function buildMarkdown(capMap){
       caps.forEach((rel,i)=> L.push(`![${idStr(e)} capture ${i+1}](${rel})`));
       if(!caps.length && (e.captures||[]).length) L.push(`_(${e.captures.length} capture(s) — connecter .claude pour les écrire en PNG)_`);
       if(caps.length) L.push("");
-      const coded = e.codedWith ? ` · Codé avec ${coderLabel(e.codedWith)}` : "";
+      const coded = (e.codedWith ? ` · Codé avec ${coderLabel(e.codedWith)}` : "") + (e.model ? ` · Modèle ${e.model}` : "");
       L.push(`<sub>créé le ${e.created}${e.updated&&e.updated!==e.created?` · maj ${e.updated}`:""}${coded}</sub>`,"");
     }
   }
@@ -1951,7 +1968,7 @@ function resetForm(){
   $("#fTitle").value=""; $("#fDesc").value="";
   $("#fType").value=state.defaults.types||state.types[0]||""; $("#fDom").value=state.defaults.categories||state.categories[0]||"";
   $("#fLot").value=""; $("#fPrio").value="P2"; $("#fStat").value="À faire";
-  $("#fCoderManual").value=""; $("#manualCoderField").classList.add("hidden");
+  $("#fCoderManual").value=""; $("#fModel").value=""; $("#manualCoderField").classList.add("hidden");
   renderPending();
 }
 function fillForm(e){
@@ -1959,7 +1976,7 @@ function fillForm(e){
   $("#fTitle").value=e.title||""; $("#fDesc").value=e.desc||"";
   $("#fType").value=e.type; $("#fDom").value=e.dom;
   $("#fLot").value=e.lot||""; $("#fPrio").value=e.prio; $("#fStat").value=e.stat;
-  $("#fCoderManual").value=e.codedWith||""; $("#manualCoderField").classList.remove("hidden");
+  $("#fCoderManual").value=e.codedWith||""; $("#fModel").value=e.model||""; $("#manualCoderField").classList.remove("hidden");
   renderPending();
 }
 
@@ -1971,7 +1988,7 @@ function fillForm(e){
    formulaire plein ne prouve rien. On compare l'état courant à l'instantané pris au moment
    d'entrer en édition. C'est aussi ce qui distingue ces fonctions de `formBusy()`, qui répond à
    une autre question — « y a-t-il quelque chose à l'écran ? » — pour l'auto-rechargement. */
-const TK_FIELDS  = ["fTitle","fDesc","fType","fDom","fLot","fPrio","fStat","fCoderManual"];
+const TK_FIELDS  = ["fTitle","fDesc","fType","fDom","fLot","fPrio","fStat","fCoderManual","fModel"];
 const LOT_FIELDS = ["leName","leGoal","leBranch","lePr","leOrder"];
 const ABANDON_MSG = "Cette saisie n'est pas enregistrée. L'abandonner ?";
 let tkClean="", lotClean="";
@@ -2034,7 +2051,8 @@ function buildTicketRead(e){
     `<span style="display:inline-flex;align-items:center;gap:5px"><span class="det-pdot ${e.prio}" style="display:inline-block"></span><b>${esc(e.prio||'—')}</b></span>`,
     `<span class="st-select ${STAT_CLASS[e.stat]||''}">${esc(e.stat||'')}</span>`,
     e.lot?`<span class="badge lot clickable" onclick="navLot('${esc(e.lot)}')">${esc(l?l.name:lotName(e.lot))}</span>`:'',
-    e.codedWith?`<span class="badge">🤖 ${esc(coderLabel(e.codedWith))}</span>`:''
+    e.codedWith?`<span class="badge">🤖 ${esc(coderLabel(e.codedWith))}</span>`:'',
+    e.model?`<span class="badge" title="Modèle">🧠 ${esc(e.model)}</span>`:''
   ].filter(Boolean).join("");
   let h=`<div class="metarow">${badges}</div>`;
   h+=`<div class="det-desc">${e.desc?esc(e.desc):'<span style="color:var(--muted)">— aucune description —</span>'}</div>`;
@@ -2152,7 +2170,11 @@ function submitForm(){
   if(existing) common.codedWith=manualCoder;
   const wasNew = !editingId;
   let savedN;
-  if(editingId){ savedN=editingId; Object.assign(state.entries.find(x=>x.n===editingId), common); }
+  if(editingId){ savedN=editingId; Object.assign(existing, common);
+    // ATL-161 — `model` n'est écrit que rempli : un ticket sans modèle n'en porte pas la clé,
+    // pour que le premier enregistrement n'ajoute pas un `"model": ""` à chaque ticket du fichier.
+    const manualModel=$("#fModel").value.trim();
+    if(manualModel) existing.model=manualModel; else delete existing.model; }
   else { savedN=state.nextId; state.entries.push(Object.assign({ n:state.nextId++, created:todayISO() }, common)); }
   rebuildDynamicSelects(); resetForm(); render(); scheduleSave();
   if(wasNew){ closeDetail(); }
@@ -2190,14 +2212,15 @@ function dupEntry(id){
   clone.title=(e.title||"(sans titre)")+" (copie)";
   clone.created=todayISO(); clone.updated=todayISO();
   clone.codedWith="";
-  delete clone.gain;            // ATL-048 — un gain est mesuré SUR un ticket : la copie ne l'hérite pas, comme codedWith
+  delete clone.model;           // ATL-161 — le modèle suit l'outil : la copie n'a encore été codée par personne
+  delete clone.gain;           // ATL-048 — un gain est mesuré SUR un ticket : la copie ne l'hérite pas, comme codedWith
   const idx=state.entries.findIndex(x=>x.n===id);
   state.entries.splice(idx<0?state.entries.length:idx+1, 0, clone);
   render(); scheduleSave(); toast("Dupliqué → "+idStr(clone));
 }
 
 /* ---------- Groupement (Cartes / Liste / colonnes Kanban) ---------- */
-const GROUP_FIELD = { stat:"stat", dom:"dom", type:"type", prio:"prio", lot:"lot", coder:"codedWith" };
+const GROUP_FIELD = { stat:"stat", dom:"dom", type:"type", prio:"prio", lot:"lot", coder:"codedWith", model:"model" };
 /* Domaine ordonné d'un axe de groupement : liste des groupes {key,name,short?,dot?} */
 function groupDomain(key){
   if(key==="stat") return STATS.map(s=>({ key:s, name:s, dot:`var(--${STAT_CLASS[s]})` }));
@@ -2206,6 +2229,7 @@ function groupDomain(key){
   if(key==="prio") return PRIOS.map(p=>({ key:p, name:PRIO_LABEL[p], short:p, dot:`var(--${p.toLowerCase()})` }));
   if(key==="lot")  return [...state.lots.map(l=>({ key:l.id, name:l.name })), { key:"", name:"Sans lot" }];
   if(key==="coder") return [{ key:"", name:"Non renseigné" }, ...allCoderValues().map(v=>({ key:v, name:`Codé avec ${coderLabel(v)}` }))];
+  if(key==="model") return [{ key:"", name:"Modèle non renseigné" }, ...allModelValues().map(v=>({ key:v, name:`Modèle ${v}` }))];
   return [];
 }
 function groupValue(e,key){ const f=GROUP_FIELD[key]; return f ? (e[f]||"") : ""; }
@@ -2423,6 +2447,8 @@ const ARCH_ENT_COLS = [
   { key:"dom",  label:"Catégorie",  get:e=>(e.dom||"").toLowerCase() },
   { key:"lot",  label:"Lot",        get:e=>lotName(e.lot).toLowerCase() },
   { key:"prio", label:"Prio",       get:e=>prioRank(e.prio) },
+  { key:"coder",label:"Codé avec",  get:e=>(e.codedWith||"").toLowerCase() },
+  { key:"model",label:"Modèle",     get:e=>(e.model||"").toLowerCase() },
   { key:"arch", label:"Archivé le", get:e=>e.archived||"" },
   { key:"act",  label:"", fixed:true },
 ];
@@ -2550,7 +2576,7 @@ function archTable(cols, rows, which, rowFn){
 function archSearchMatch(q, ...vals){ if(!q) return true; return vals.join(" ").toLowerCase().includes(q.toLowerCase()); }
 function renderArchEntries(c){
   const q=(currentFilter().q||"").trim();
-  const rows=archivedEntries().filter(e=>archSearchMatch(q, idStr(e), e.title, e.dom));
+  const rows=archivedEntries().filter(e=>archSearchMatch(q, idStr(e), e.title, e.dom, e.codedWith||"", e.model||""));
   if(!rows.length){ const n=el("div","no-res"); n.textContent = q ? "Aucun ticket archivé ne correspond à la recherche." : "Aucun ticket archivé. Archive un ticket (souvent quand il est « Fait ») pour le ranger ici."; c.appendChild(n); return; }
   c.appendChild(archTable(ARCH_ENT_COLS, rows, "ent", e=>{
     const tr=el("tr","done");
@@ -2559,11 +2585,13 @@ function renderArchEntries(c){
     const cCa=el("td"); cCa.textContent=e.dom;
     const cLo=el("td"); cLo.innerHTML=e.lot?`<span class="badge lot">◧ ${esc(lotName(e.lot))}</span>`:'<span class="cam">—</span>';
     const cPr=el("td"); cPr.innerHTML=`<span class="badge prio ${e.prio}">${e.prio}</span>`;
+    const cCw=el("td"); cCw.innerHTML=coderBadgeHtml(e.codedWith, false) || '<span class="cam">—</span>';
+    const cMo=el("td"); cMo.innerHTML=e.model ? esc(e.model) : '<span class="cam">—</span>';
     const cAr=el("td","cam"); cAr.textContent=fmtDate(e.archived);
     const cAc=el("td"); cAc.style.whiteSpace="nowrap";
     const un=el("button","btn sm"); un.textContent="↩ Désarchiver"; un.onclick=()=>unarchiveEntry(e.n);
     cAc.append(un, iconBtn("trash","danger","Supprimer",()=>delEntry(e.n)));
-    tr.append(cId,cTi,cCa,cLo,cPr,cAr,cAc);
+    tr.append(cId,cTi,cCa,cLo,cPr,cCw,cMo,cAr,cAc);
     return tr;
   }));
 }
@@ -2882,7 +2910,7 @@ function deleteLot(i){
 /* ---------- Filtre + tri ---------- */
 /* Modèle « barre de filtres » façon Notion : liste ordonnée de {key, op, values}, une entrée par propriété.
    op = "is" (est) | "not" (n'est pas) | "empty" (est vide). Chaque filtre = une pilule cliquable de la barre. */
-const FILTER_FIELD = { dom:"dom", type:"type", lot:"lot", prio:"prio", stat:"stat", coder:"codedWith" };
+const FILTER_FIELD = { dom:"dom", type:"type", lot:"lot", prio:"prio", stat:"stat", coder:"codedWith", model:"model" };
 const FILTER_OPS = [["is","est"],["not","n'est pas"],["empty","est vide"]];
 const opLabel = o => (FILTER_OPS.find(x=>x[0]===o)||FILTER_OPS[0])[1];
 const SORT_OPTS = [["prio","Priorité"],["recent","Plus récent"],["dom","Catégorie"]];
@@ -2902,7 +2930,7 @@ function filteredRows(f){
   return state.entries.filter(e=>{
     if(e.archived) return false;
     for(const flt of f.filters){ if(!filterMatch(flt, e)) return false; }   // ET inter-propriétés
-    if(f.q && !((e.title+" "+e.desc+" "+idStr(e)+" "+(e.codedWith||"")).toLowerCase().includes(f.q))) return false;
+    if(f.q && !((e.title+" "+e.desc+" "+idStr(e)+" "+(e.codedWith||"")+" "+(e.model||"")).toLowerCase().includes(f.q))) return false;
     return true;
   });
 }
@@ -2922,6 +2950,7 @@ function filterValueList(key){
   if(key==="stat") return STATS.map(v=>({v,label:v}));
   if(key==="lot") return state.lots.map(l=>({v:l.id,label:l.name}));
   if(key==="coder") return allCoderValues().map(v=>({v,label:coderLabel(v)}));
+  if(key==="model") return allModelValues().map(v=>({v,label:v}));
   return [];
 }
 function filterValueLabel(key,val){
@@ -3209,6 +3238,8 @@ const TABLE_COLS = [
     cell:e=>{ const td=el("td"); td.innerHTML = e.lot?`<span class="badge lot">◧ ${esc(lotName(e.lot))}</span>`:'<span class="cam">—</span>'; return td; } },
   { key:"coder", label:"Codé avec", get:e=>coderLabel(e.codedWith).toLowerCase(),
     cell:e=>{ const td=el("td"); td.innerHTML = ticketCoderBadgeHtml(e, false) || '<span class="cam">—</span>'; return td; } },
+  { key:"model", label:"Modèle",    get:e=>(e.model||"").toLowerCase(),
+    cell:e=>{ const td=el("td"); td.innerHTML = e.model ? esc(e.model) : '<span class="cam">—</span>'; return td; } },
   { key:"prio",  label:"Prio",      get:e=>prioRank(e.prio),
     cell:e=>{ const td=el("td"); td.innerHTML=`<span class="badge prio ${e.prio}">${e.prio}</span>`; return td; } },
   { key:"stat",  label:"Statut",    get:e=>STATS.indexOf(e.stat),
@@ -3388,7 +3419,7 @@ function lotCoders(l){
 function lotPrompt(l){
   const ids=lotEntries(l).map(idStr).join(", ");
   const where = PROJECT.worktrees ? " dans un worktree" : "";
-  return `Regarde le suivi. Démarre le lot « ${l.name} »${ids?` (${ids})`:""}${where}. Au terme du code, renseigne codedWith sur chaque ticket avec l’IA réellement utilisée (${PROJECT.coders.join(", ")} ou le nom exact d’une autre IA) ; aucun ticket ne doit passer à Fait sans cette attribution.`;
+  return `Regarde le suivi. Démarre le lot « ${l.name} »${ids?` (${ids})`:""}${where}. Au terme du code, renseigne codedWith sur chaque ticket avec l’IA réellement utilisée (${PROJECT.coders.join(", ")} ou le nom exact d’une autre IA) ; aucun ticket ne doit passer à Fait sans cette attribution. Renseigne aussi model avec le modèle utilisé (ex. ${MODELS[0]}), « Mixte » s’il y en a eu plusieurs — facultatif si tu ne le connais pas.`;
 }
 function copyText(t){
   if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
@@ -3948,6 +3979,8 @@ function adoptState(d){
     if(e.type===undefined) e.type=state.types[0];
     if(typeof e.codedWith!=="string") e.codedWith="";
     else e.codedWith=e.codedWith.trim();
+    // ATL-161 — `model` n'existe que rempli : ni clé vide ajoutée, ni valeur autre qu'une chaîne gardée.
+    if(typeof e.model==="string" && e.model.trim()) e.model=e.model.trim(); else delete e.model;
   });
   // ATL-090 — une capture écrite en CHAÎNE (forme d'un vieux suivi.json : le data-url seul, sans
   // objet autour) redevient un objet ici. Sans ça elle traversait la page sans être vue : pas de
@@ -3974,6 +4007,7 @@ function rebuildDynamicSelects(){
   fillSelect($("#fDom"), state.categories, null, true);
   const lotOpts = [{value:"",label:"— Aucun lot —"}, ...state.lots.map(l=>({value:l.id,label:l.name})), {value:"__new__",label:"＋ Nouveau lot…"}];
   fillSelect($("#fLot"), lotOpts, null, true);
+  $("#modelSuggestions").innerHTML = allModelValues().map(v=>`<option value="${esc(v)}"></option>`).join("");
   renderFilterChips();
 }
 function initStaticSelects(){
