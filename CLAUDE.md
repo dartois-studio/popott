@@ -107,7 +107,8 @@ Le suivi vit dans `.claude` :
 
 | Fichier | Statut | Usage |
 |---|---|---|
-| `.claude/suivi-actif.md` | dérivé **à lire** | l'actionnable seul : tickets ouverts, lots non clos, décisions, reprise (~1 Ko) |
+| `.claude/lots/<ID>.md` | dérivé **à lire** | une page par lot non clos : reprise entière, tickets, toutes les décisions |
+| `.claude/suivi-actif.md` | dérivé **à lire** | le sommaire : une ligne par lot non clos, reprises, tickets sans lot |
 | `.claude/suivi.json` | **source de vérité** | à **écrire**, par Edit ciblé — jamais à relire en entier |
 | `.claude/suivi.md` | dérivé complet | **ne jamais éditer, ni lire par défaut** |
 | `.claude/suivi-projet.html` | interface | ouvert par Guillaume dans le navigateur |
@@ -115,7 +116,8 @@ Le suivi vit dans `.claude` :
 
 **Règles :**
 
-1. « Regarde le suivi » → lire `.claude/suivi-actif.md`, **rien d'autre**. N'ouvrir `suivi.json`
+1. « Regarde le suivi » → lire `.claude/suivi-actif.md`, puis la page du lot visé,
+   `.claude/lots/<ID>.md` — **rien d'autre**. N'ouvrir `suivi.json`
    que pour **écrire**, par Edit ciblé ; ne jamais ouvrir le `.html` ni `suivi.md`.
 2. Toute écriture se fait dans `suivi.json`, en **conservant le format exact** : indentation
    2 espaces, `": "` après les clés, accents littéraux, LF, **pas** de newline final. C'est le

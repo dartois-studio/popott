@@ -1,8 +1,12 @@
 # popott — suivi actif
 
-_Dérivé de `suivi.json` le 11/09/2026 12:51. **Ne pas éditer** : régénérer avec `.claude\generate-suivi.ps1`. Pour écrire, ouvrir `suivi.json` par Edit ciblé._
+_Sommaire dérivé de `suivi.json` le 23/09/2026 15:28. **Ne pas éditer** (`.claude\generate-suivi.ps1`). Un lot se travaille sur sa page `.claude/lots/<ID>.md` ; on écrit dans `suivi.json`._
 
 **Résumé** — 5 ouverts · 0 lots non clos · en cours : — · branche : —
+
+## Lots non clos (0)
+
+_Aucun._
 
 ## Tickets ouverts (5)
 
@@ -11,10 +15,6 @@ _Dérivé de `suivi.json` le 11/09/2026 12:51. **Ne pas éditer** : régénérer
 - POP-006 · P2 · À faire — Quatre panneaux hors de portée du balayage automatique
 - POP-007 · P3 · À faire — Sept valeurs hexadécimales encore en dur, hors jetons
 - POP-008 · P3 · À faire — Le panneau compte vit à l'adresse `#compte`, hors de l'interface
-
-## Lots non clos (0)
-
-_Aucun._
 
 ## Gains mesurés (0 sur 0)
 

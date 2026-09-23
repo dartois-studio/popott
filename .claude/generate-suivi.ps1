@@ -1,4 +1,5 @@
-﻿# Régénère suivi.md ET suivi-actif.md depuis suivi.json (source de vérité).
+﻿# Régénère suivi.md, suivi-actif.md (le sommaire) et lots\<ID>.md (une page par lot non clos)
+# depuis suivi.json (source de vérité).
 # Usage : powershell -ExecutionPolicy Bypass -File .claude\generate-suivi.ps1
 # Même format que le buildMarkdown de suivi-projet.html, enrichi des champs PR/lot/codedWith.
 #
@@ -31,15 +32,13 @@ param(
   [string]$Participle = '',
   [string]$StageDone = ''
   ,
-  [int]$MaxActifBytes = 8192        # 0 = illimité. Plafond du FICHIER suivi-actif.md (ATL-013),
-                                    # réparti entre les décisions des lots, puis les gains.
-  ,
-  [int]$MaxDecisionChars = 0        # 0 = illimité. Plafond de secours PAR lot, en caractères :
-                                    # le plafond de fichier gouverne désormais.
+  [int]$MaxActifBytes = 8192        # 0 = illimité. Garde-fou du sommaire suivi-actif.md (ATL-013) :
+                                    # depuis ATL-162 il ne coupe plus rien, il AVERTIT.
 )
 $ErrorActionPreference = 'Stop'
 if (-not $MdPath) { $MdPath = Join-Path (Split-Path $JsonPath) 'suivi.md' }
 $ActifPath = Join-Path (Split-Path $JsonPath) 'suivi-actif.md'
+$LotsDir = Join-Path (Split-Path $JsonPath) 'lots'
 
 # ---- Config lue depuis le bloc PROJECT du tracker HTML (valeurs de repli si absent) ----
 function Get-SuiviConfig([string]$dir) {
@@ -159,22 +158,19 @@ function PrLabel($o) {
   return $s
 }
 
-# ---- Projection actionnable : suivi-actif.md — le SEUL fichier de suivi à lire ----
-# Contrat (ATL-002) : tickets ouverts en une ligne chacun, lots non clos avec leurs décisions,
-# la reprise en tête, les gains mesurés en pied. Aucun ticket Fait, aucune description longue.
-# C'est un dérivé, pas une seconde source de vérité.
-#
-# Budget (ATL-013) : le plafond est celui du FICHIER — $MaxActifBytes — et non un forfait par
-# lot, qui laissait la taille croître sans borne avec le nombre de lots ouverts. Ordre de
-# service, du jamais coupé au premier sacrifié :
-#   1. entête, ligne « Résumé », reprise, liste des tickets ouverts, identité de chaque lot
-#      (titre, méta, but) — l'ossature ne se coupe jamais ;
-#   2. les DÉCISIONS des lots, part dégressive, le lot en cours servi le premier puis par
-#      `order` ; ce qu'un lot ne consomme pas passe au suivant ;
-#   3. les GAINS, sur le solde : ce sont des mesures acquises, pas ce qui fait redémarrer.
-# Toute omission est annoncée sur place, et la ligne de sortie du script AVERTIT quand le
-# plafond mord — sinon la dérive redevient invisible, comme les tailles périmées d'ATL-001.
-$UNLIMITED = 1073741824          # budget « sans plafond », borné pour rester en arithmétique 32 bits
+# ---- Projections actionnables : deux niveaux (ATL-162) ----------------------------------------
+# Fondement : audits/2026-09-23-poids-du-suivi-actif.md (Atelier). Une page unique pour tous les
+# lots obligeait à arbitrer un budget entre eux — réglé six fois : ATL-013, 023, 042, 056, 160,
+# 162 — alors qu'une séance couvre UN lot (règle 1), et 3 fois sur 4 sait lequel en ouvrant.
+#   1. suivi-actif.md, le SOMMAIRE : la ligne « Résumé », la première phrase de chaque reprise,
+#      une ligne par lot non clos, les tickets SANS lot en entier, les autres comptés par lot.
+#      Aucune décision. C'est ce que lisent une séance ouverte et `tools/depots.ps1`.
+#   2. .claude\lots\<ID>.md, une PAGE PAR LOT non clos : reprise entière, but, tickets, TOUTES
+#      les décisions (les marquées en tête), gains du lot. Rien n'y est coupé : un lot se borne
+#      lui-même. La page d'un lot clos est supprimée — sinon une séance reprend un lot fini.
+# Ce sont des dérivés, pas une seconde source de vérité. Le plafond $MaxActifBytes ne coupe plus
+# rien : il reste un garde-fou du sommaire, qui AVERTIT s'il est franchi (ATL-013 : une
+# projection qui grossit sans le dire, c'est la dérive d'ATL-001).
 # UN LOT OUVERT EST UN LOT NON CLOS (ATL-044) : la question posée ici est la seule qui compte,
 # et elle passe par la classe. Un statut vide ou inconnu n'est PAS clos — un lot qu'on ne sait
 # pas lire reste visible.
@@ -189,7 +185,7 @@ function GainStr($g) {
   if ($g.note) { if ($s) { $s += ' · ' }; $s += [string]$g.note }
   return $s
 }
-# "arrêt : … · reste : … · tenté sans succès : …" — '' si pas de reprise
+# "arrêt : … · reste : … · tenté sans succès : …" — '' si pas de reprise. Sert à suivi.md.
 function RepriseStr($r) {
   if (-not $r) { return '' }
   $bits = @()
@@ -199,15 +195,9 @@ function RepriseStr($r) {
   return $bits -join ' · '
 }
 
-# ---- Comptage en OCTETS : le plafond est une taille de fichier, pas un nombre de caractères,
-# et la prose française coûte deux octets par accent. Le fichier est UTF-8 sans BOM, lignes
-# jointes par un saut de ligne : une ligne coûte ses octets, plus un.
+# ---- Comptage en OCTETS : la prose française coûte deux octets par accent. Le fichier est
+# UTF-8 sans BOM, lignes jointes par un saut de ligne : une ligne coûte ses octets, plus un.
 function LineBytes([string]$s) { return [Text.Encoding]::UTF8.GetByteCount($s) + 1 }
-function BlockBytes($lines) {
-  $n = 0
-  foreach ($l in $lines) { $n += LineBytes ([string]$l) }
-  return $n
-}
 # Coupe une prose à $max octets sur une frontière de mot, en montrant la coupe.
 function ClipBytes([string]$s, [int]$max) {
   $suffix = ' […]'
@@ -221,73 +211,50 @@ function ClipBytes([string]$s, [int]$max) {
   if ($sp -gt 40) { $t = $t.Substring(0, $sp) }
   return $t.TrimEnd() + $suffix
 }
-# Part dégressive : un peu moins du double de la part égale du reste. Le premier servi prend
-# la plus grosse part et laisse toujours de quoi servir les suivants ; le dernier prend le solde.
-function Share([int]$budget, [int]$rest) {
-  if ($rest -le 1) { return $budget }
-  return [int][Math]::Floor(2 * $budget / ($rest + 1))
+# Première phrase d'une prose : jusqu'au premier . ! ? suivi d'un blanc ou de la fin — un point
+# dans un nom de fichier (`generate-suivi.ps1`) n'en est donc pas un. Bornée à $max octets : une
+# « phrase » de reprise peut courir sur 300 caractères.
+function FirstSentence([string]$s, [int]$max) {
+  if (-not $s) { return '' }
+  $m = [regex]::Match($s, '^.+?[.!?](?=\s|$)')
+  $t = if ($m.Success) { $m.Value } else { $s }
+  return (ClipBytes $t $max)
 }
-# Ligne d'omission d'un lot : combien de décisions manquent, leur poids, et où les lire.
 # ATL-023 — la marque « à lire avant de proposer quoi que ce soit sur ce lot ». Elle se pose à la
 # main dans `suivi.json` (`"garde": true` sur la décision), et JAMAIS ne se déduit du texte : le
-# rang par le texte est mesuré faux, décision n° 1 du lot L-projection. Vérifié le 04/09 en
-# exécutant le pipeline du tracker : une clé imbriquée survit à une sauvegarde de `suivi-projet.html`.
+# rang par le texte est mesuré faux, décision n° 1 du lot L-projection. Depuis ATL-162 elle ne
+# protège plus d'une éviction — rien n'est évincé d'une page de lot — elle ORDONNE : en tête.
 function IsGarde($dec) {
   if ($null -eq $dec) { return $false }
   $v = $dec.garde
   return ($v -eq $true -or "$v" -eq 'true' -or "$v" -eq '1')
 }
-
-function OmitLine([string]$lotId, [int]$cut, [int]$chars, [bool]$all, [int]$gardes = 0) {
-  # ATL-023 — une décision MARQUÉE qui saute quand même doit se voir, sinon la marque ment. Et
-  # « plus ancienne(s) » disparaît de la formule : depuis que les marquées passent devant, ce qui
-  # saute n'est plus le début du tableau, et l'annoncer ainsi serait faux.
-  # Écart relevé le 07/09/2026 (séance ATL-043, lot à 4 marquées) : la ligne COMPTE la marquée
-  # écartée sans la NOMMER, alors que la règle 8 du CLAUDE.md écrit « est nommée dans la ligne
-  # d'omission ». Le code ou la règle doit céder — ne pas trancher ici sans mesure : c'est le
-  # territoire d'ATL-042, qui doit avoir vécu une semaine (règle 1 du dépôt).
-  $g = if ($gardes -gt 0) { ', dont {0} MARQUÉE(S) « à lire d''abord »' -f $gardes } else { '' }
-  if ($all) {
-    return ('- ({0} décision(s) non affichée(s){1}, {2} car. — plafond de fichier atteint ; dans `suivi.json`, lot {3})' -f $cut, $g, $chars, $lotId)
-  }
-  return ('- ({0} décision(s) non affichée(s){1}, {2} car. — dans `suivi.json`, lot {3})' -f $cut, $g, $chars, $lotId)
+# Nom de fichier d'une page de lot : l'id, débarrassé de ce que Windows refuse dans un nom.
+function LotFile([string]$id) { return (($id -replace '[\\/:*?"<>|\s]', '_') + '.md') }
+function LotRel([string]$id) { return ('.claude/lots/' + (LotFile $id)) }
+# Signature d'une page de lot, dans sa ligne d'en-tête : c'est elle, et elle seule, qui autorise
+# le générateur à supprimer un fichier de .claude\lots\ — jamais un fichier posé là à la main.
+$LOT_MARK = 'page de lot dérivée de `suivi.json`'
+function TicketLine($e) {
+  $lotTag = if ($e.lot) { ' · ' + [string]$e.lot } else { '' }
+  return ('- ' + (IdStr $e) + ' · ' + $e.prio + ' · ' + [string]$e.stat + $lotTag + ' — ' + $e.title)
+}
+function DecisionLine($dec, [bool]$mark) {
+  $m = if ($mark) { '**à lire d''abord** · ' } else { '' }
+  return ('- 📌 ' + $m + $(if ($dec.date) { "$($dec.date) — " }) + [string]$dec.txt)
+}
+function Utf8Write([string]$Path, $lines) {
+  [IO.File]::WriteAllText($Path, (($lines -join "`n").TrimEnd() + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 }
 
-# ATL-042 — la section des gains, titre et annonces comprises. Une seule fonction pour la
-# réserver dans l'ossature et pour l'écrire : réservée d'un côté et rendue de l'autre par deux
-# formules différentes, le plafond deviendrait faux au moment précis où il doit tenir.
-function GainsTitle([int]$shown, [int]$total) { return ('## Gains mesurés (' + $shown + ' sur ' + $total + ')') }
-function GainsOmitLine([int]$n) { return ('_(' + $n + ' gain(s) plus ancien(s) non affiché(s) — dans `suivi.md`.)_') }
-function GainsArchLine([int]$n) { return ('_(' + $n + ' gain(s) de lot clos — ils suivent leur lot, dans `suivi.md`.)_') }
-function GainsLines($shown, [int]$keep, [int]$total, [int]$arch) {
-  # Le second nombre du titre est le total RÉEL, archivés compris : `tools/depots.ps1` le relit
-  # (`^##\s+Gains mesurés\s+\((\d+)\s+sur\s+(\d+)\)`) pour compter les gains du parc. N'y mettre
-  # que les candidats ferait sous-déclarer la page agrégée de 28 gains sur 32.
-  $l = @((GainsTitle $keep ($total + $arch)), '')
-  if (-not ($total + $arch)) { $l += '_Aucun gain renseigné — un ticket ne passe pas à `Fait` sans son `gain` : `{ date, avant, apres, note }`._' }
-  $l += @(@($shown) | Select-Object -First $keep)
-  if ($total -gt $keep) { $l += (GainsOmitLine ($total - $keep)) }
-  if ($arch -gt 0) { $l += (GainsArchLine $arch) }
-  return @($l)
-}
-function GainsBytes($shown, [int]$keep, [int]$total, [int]$arch) { return (BlockBytes (GainsLines $shown $keep $total $arch)) }
-
-function Write-SuiviActif([string]$Path) {
+# ---- Niveau 1 : le sommaire ----
+function Write-SuiviActif([string]$Path, $open, $parked, $live) {
   $a = New-Object System.Collections.Generic.List[string]
-  # 'Parké' sort de l'actionnable : ce fichier est « l'actionnable seul », et un ticket parqué est
-  # par définition ce qui ne l'est pas. Il n'est pas masqué pour autant — il est listé en dessous,
-  # avec sa raison dans le ticket. Une liste qui se tait coûte plus cher qu'une liste longue.
-  # Cas jamais rencontré avant le 01/09/2026 : aucun ticket n'avait été parqué dans ce dépôt.
-  # Les trois listes se décident sur la CLASSE et non sur le libellé (ATL-044). Un statut de
-  # clôture propre au dépôt — « En ligne » chez Sable, « Buildé SW » sur un add-in — sortait de
-  # l'actionnable seulement là où son libellé était écrit en dur : les 29 entrées « En ligne »
-  # de Sable étaient comptées ouvertes.
-  $open = @($entries | Where-Object { -not $_.archived -and @('clos', 'hors') -notcontains (ClasseEntree $_) } |
-    Sort-Object @{e = { PrioRank $_.prio }}, @{e = { [int]$_.n }})
-  $parked = @($entries | Where-Object { -not $_.archived -and (ClasseEntree $_) -eq 'hors' } |
-    Sort-Object @{e = { PrioRank $_.prio }}, @{e = { [int]$_.n }})
-  $live = @($lots | Where-Object { -not (LotIsClosed $_) } |
-    Sort-Object @{e = { if ($_.order) { [int]$_.order } else { 999 } }}, @{e = { [string]$_.id }})
+  $liveIds = @($live | ForEach-Object { [string]$_.id })
+  # Un ticket dont le lot n'est pas (ou plus) non clos n'a pas de page : il reste listé ici en
+  # entier. Masquer un ticket ouvert, c'est le perdre.
+  $homeOpen = @($open | Where-Object { -not $_.lot -or ($liveIds -notcontains [string]$_.lot) })
+  $homePark = @($parked | Where-Object { -not $_.lot -or ($liveIds -notcontains [string]$_.lot) })
   # « En cours » de la ligne de résumé = la classe `en-travail`, pas le libellé, et pas `branch`
   # non plus : décider d'après une extension est ce que le socle interdit (§5). Un dépôt dont
   # aucun lot n'est en travail affiche « — », ce qui est la vérité de son suivi.
@@ -295,7 +262,7 @@ function Write-SuiviActif([string]$Path) {
 
   $a.Add('# ' + $ProjectName + ' — suivi actif')
   $a.Add('')
-  $a.Add('_Dérivé de `suivi.json` le ' + (Get-Date).ToString('dd/MM/yyyy HH:mm') + '. **Ne pas éditer** : régénérer avec `.claude\generate-suivi.ps1`. Pour écrire, ouvrir `suivi.json` par Edit ciblé._')
+  $a.Add('_Sommaire dérivé de `suivi.json` le ' + (Get-Date).ToString('dd/MM/yyyy HH:mm') + '. **Ne pas éditer** (`.claude\generate-suivi.ps1`). Un lot se travaille sur sa page `.claude/lots/<ID>.md` ; on écrit dans `suivi.json`._')
   $a.Add('')
   # Ligne de résumé au format STRICT : tools/depots.ps1 la relit pour la page agrégée.
   $curId = '—'; $curBranch = '—'
@@ -306,206 +273,179 @@ function Write-SuiviActif([string]$Path) {
   $a.Add('**Résumé** — ' + $open.Count + ' ouverts · ' + $live.Count + ' lots non clos · en cours : ' + $curId + ' · branche : ' + $curBranch)
   $a.Add('')
 
-  # ---- Reprise : la première chose que lit la session suivante (ATL-004) ----
-  # Jamais soumise au budget : sans elle la session repart à zéro, ce qui coûte bien plus
-  # cher que le fichier entier.
+  # ---- Reprise : la première phrase de l'arrêt, et la page où lire le reste (ATL-004) ----
+  # Une ligne « - » par lot : tools/depots.ps1 les recopie dans « Points d'arrêt à reprendre ».
   $reprises = @($live | Where-Object { $_.reprise })
   if ($reprises.Count) {
     $a.Add('## Reprise'); $a.Add('')
     foreach ($l in $reprises) {
       $d = if ($l.reprise.date) { ' (' + $l.reprise.date + ')' } else { '' }
-      $a.Add('- **' + [string]$l.id + '**' + $d + ' — ' + (RepriseStr $l.reprise))
+      $s = FirstSentence ([string]$l.reprise.arret) 160
+      if (-not $s) { $s = FirstSentence ([string]$l.reprise.reste) 160 }
+      $a.Add('- **' + [string]$l.id + '**' + $d + ' — ' + $s + ' → `' + (LotRel ([string]$l.id)) + '`')
     }
     $a.Add('')
   }
 
-  # ---- Tickets ouverts : une ligne chacun, titre seul ----
-  # Non plafonnés : une ligne coûte ~80 octets, et masquer un ticket ouvert c'est le perdre.
+  # ---- Lots non clos : une ligne chacun ----
+  # Le chemin de la page n'est pas répété ligne à ligne : l'en-tête en donne la règle, et seule la
+  # section Reprise le cite, parce que c'est là qu'une séance cherche quoi ouvrir.
+  # « au travail » : le lot est en classe en-travail, OU un de ses tickets l'est, OU il porte une
+  # reprise — un point d'arrêt fait un lot démarré, quel que soit son statut (décision du lot
+  # L-lots-en-attente, 23/09/2026 : l'étiquette du lot n'est pas tenue à jour). Sinon « en attente ».
+  $a.Add('## Lots non clos (' + $live.Count + ')'); $a.Add('')
+  if (-not $live.Count) { $a.Add('_Aucun._') }
+  foreach ($l in $live) {
+    $id = [string]$l.id
+    $nOpen = @($open | Where-Object { [string]$_.lot -eq $id }).Count
+    $busy = ((ClasseLot $l) -eq 'en-travail') -or [bool]$l.reprise -or
+            [bool]@($entries | Where-Object { [string]$_.lot -eq $id -and (ClasseEntree $_) -eq 'en-travail' }).Count
+    # Parenthèses obligatoires : la virgule lie avant le +, et `'**' + $id + '**', $nom` colle
+    # le nom au premier élément au lieu d'en faire un second.
+    $bits = @(('**' + $id + '**'), [string]$l.name)
+    if ($l.status) { $bits += [string]$l.status }
+    $bits += $(if ($busy) { 'au travail' } else { 'en attente' })
+    $bits += ('{0} ticket(s) ouvert(s)' -f $nOpen)
+    if ($l.reprise -and $l.reprise.date) { $bits += ('reprise du ' + [string]$l.reprise.date) }
+    $a.Add('- ' + ($bits -join ' · '))
+  }
+  $a.Add('')
+
+  # ---- Tickets ouverts : ceux sans lot en entier, les autres comptés dans leur page ----
+  # Les lignes de compte sont en italique : tools/depots.ps1 ne collecte que les lignes « - ».
   $a.Add('## Tickets ouverts (' + $open.Count + ')'); $a.Add('')
   if (-not $open.Count) { $a.Add('_Aucun._') }
-  foreach ($e in $open) {
-    $lotTag = if ($e.lot) { ' · ' + [string]$e.lot } else { '' }
-    $a.Add('- ' + (IdStr $e) + ' · ' + $e.prio + ' · ' + $e.stat + $lotTag + ' — ' + $e.title)
+  foreach ($e in $homeOpen) { $a.Add((TicketLine $e)) }
+  foreach ($l in $live) {
+    $n = @($open | Where-Object { [string]$_.lot -eq [string]$l.id }).Count
+    if ($n) { $a.Add('_+ ' + $n + ' ticket(s) de ' + [string]$l.id + ' — dans sa page._') }
   }
   $a.Add('')
 
   # ---- Hors de l'actionnable : jamais silencieux ----
-  # La section est décidée par la CLASSE 'hors', pas par un libellé — elle réunit donc « Parké »
-  # (en pause, avec condition de réouverture) et « Abandonné » (on ne le fera pas, ATL-080). Ces
-  # deux-là ne se lisent pas pareil : le statut est écrit sur chaque ligne, sinon le sous-titre
-  # d'avant — « la condition de réouverture est dans le ticket » — devenait faux pour la moitié.
+  # La section est décidée par la CLASSE 'hors', pas par un libellé — elle réunit « Parké » (en
+  # pause, avec condition de réouverture) et « Abandonné » (on ne le fera pas, ATL-080).
   if ($parked.Count) {
     $a.Add('## Hors de l''actionnable (' + $parked.Count + ')'); $a.Add('')
     $a.Add('_Rien à y faire. **Parké** : en l''état seulement, la condition de réouverture est dans le ticket. **Abandonné** : on ne le fera pas._'); $a.Add('')
-    foreach ($e in $parked) {
-      $lotTag = if ($e.lot) { ' · ' + [string]$e.lot } else { '' }
-      $a.Add('- ' + (IdStr $e) + ' · ' + $e.prio + ' · ' + [string]$e.stat + $lotTag + ' — ' + $e.title)
+    foreach ($e in $homePark) { $a.Add((TicketLine $e)) }
+    foreach ($l in $live) {
+      $n = @($parked | Where-Object { [string]$_.lot -eq [string]$l.id }).Count
+      if ($n) { $a.Add('_+ ' + $n + ' de ' + [string]$l.id + ' — dans sa page._') }
     }
     $a.Add('')
   }
 
-  # ---- Lots non clos : identité (jamais coupée), puis décisions (au budget) ----
-  $a.Add('## Lots non clos (' + $live.Count + ')'); $a.Add('')
-  if (-not $live.Count) { $a.Add('_Aucun._'); $a.Add('') }
+  # ---- Gains mesurés : seulement ceux qui n'ont pas d'autre maison (ATL-010, ATL-042) ----
+  # UN GAIN SUIT SON LOT : celui d'un lot non clos est dans la page du lot, celui d'un lot clos
+  # dans `suivi.md`. Reste ici le gain SANS lot, qu'aucune page ne porte. Le second nombre du
+  # titre est le total RÉEL : `tools/depots.ps1` le relit pour compter les gains du parc.
+  $gAll = @($entries | Where-Object { $_.gain } | Sort-Object @{e = { [string]$_.gain.date }} -Descending)
+  $gHome = @($gAll | Where-Object { -not $_.lot })
+  $gLive = @($gAll | Where-Object { $_.lot -and ($liveIds -contains [string]$_.lot) }).Count
+  $gArch = $gAll.Count - $gHome.Count - $gLive
+  $GAIN_MAX = 2; $GAIN_NOTE = 160
+  $gShown = @($gHome | Select-Object -First $GAIN_MAX)
+  $a.Add('## Gains mesurés (' + $gShown.Count + ' sur ' + $gAll.Count + ')'); $a.Add('')
+  if (-not $gAll.Count) { $a.Add('_Aucun gain renseigné — un ticket ne passe pas à `Fait` sans son `gain` : `{ date, avant, apres, note }`._') }
+  foreach ($e in $gShown) { $a.Add('- ' + (IdStr $e) + ' · ' + [string]$e.gain.date + ' — ' + (ClipBytes (GainStr $e.gain) $GAIN_NOTE)) }
+  if ($gHome.Count -gt $gShown.Count) { $a.Add('_(' + ($gHome.Count - $gShown.Count) + ' gain(s) sans lot plus ancien(s) — dans `suivi.md`.)_') }
+  if ($gLive) { $a.Add('_(' + $gLive + ' gain(s) de lot non clos — dans la page de leur lot.)_') }
+  if ($gArch) { $a.Add('_(' + $gArch + ' gain(s) de lot clos — ils suivent leur lot, dans `suivi.md`.)_') }
 
-  # Ordre de service : le lot en cours d'abord, puis l'ordre de `order` déjà appliqué à $live.
-  $curIds = @($cur | ForEach-Object { [string]$_.id })
-  $ordered = @(@($live | Where-Object { $curIds -contains [string]$_.id }) +
-               @($live | Where-Object { $curIds -notcontains [string]$_.id }))
-  $blocks = @()
-  foreach ($l in $ordered) {
-    $head = @()
-    $head += ('### ' + [string]$l.id + ' · ' + [string]$l.name)
-    $meta = @()
-    if ($l.status) { $meta += [string]$l.status }
-    if ($l.difficulty) { $meta += [string]$l.difficulty }
-    if ($l.branch) { $meta += 'branche `' + $l.branch + '`' }
-    $pl = PrLabel $l; if ($pl) { $meta += $pl }
-    $meta += '{0} ticket(s) ouvert(s)' -f @($open | Where-Object { [string]$_.lot -eq [string]$l.id }).Count
-    $head += ('_' + ($meta -join ' · ') + '_')
-    # ATL-160 — un lot classe 'ouvert' (Planifié) n'a aucun ticket commencé : son « But », souvent
-    # plusieurs centaines d'octets de prose, ne vaut pas d'être JAMAIS COUPÉ au même titre qu'un
-    # lot en-travail. Il se réduit à un renvoi d'une ligne ; ses décisions, elles, restent — c'est
-    # ce qu'impose la règle 8 du CLAUDE.md (« relire les décisions avant de proposer une approche »)
-    # y compris sur un lot pas encore démarré.
-    if ($l.goal) {
-      if ((ClasseLot $l) -eq 'ouvert') {
-        $head += ('_But : pas commencé — dans `suivi.json`, lot ' + [string]$l.id + '._')
-      } else {
-        $head += ('But : ' + $l.goal)
+  Utf8Write $Path $a
+  return @{ Open = $open.Count; Lots = $live.Count; Size = (Get-Item $Path).Length; Cap = $MaxActifBytes }
+}
+
+# ---- Niveau 2 : une page par lot non clos ----
+function Write-LotPage([string]$Path, $l, $open, $parked) {
+  $id = [string]$l.id
+  $p = New-Object System.Collections.Generic.List[string]
+  $p.Add('# ' + $id + ' · ' + [string]$l.name)
+  $p.Add('')
+  $p.Add('_' + $ProjectName + ' — ' + $LOT_MARK + ' le ' + (Get-Date).ToString('dd/MM/yyyy HH:mm') + '. **Ne pas éditer** : régénérer avec `.claude\generate-suivi.ps1`. Les autres lots : `.claude/suivi-actif.md`._')
+  $p.Add('')
+  $lotOpen = @($open | Where-Object { [string]$_.lot -eq $id })
+  $lotPark = @($parked | Where-Object { [string]$_.lot -eq $id })
+  $lotDone = @($entries | Where-Object { [string]$_.lot -eq $id -and (ClasseEntree $_) -eq 'clos' } |
+    Sort-Object @{e = { [int]$_.n }})
+  $meta = @()
+  if ($l.status) { $meta += [string]$l.status }
+  if ($l.difficulty) { $meta += [string]$l.difficulty }
+  if ($l.branch) { $meta += 'branche `' + $l.branch + '`' }
+  $pl = PrLabel $l; if ($pl) { $meta += $pl }
+  if ($l.builtSw) { $meta += "$Participle le $($l.builtSw)" }
+  $meta += '{0} ticket(s) ouvert(s)' -f $lotOpen.Count
+  $p.Add('_' + ($meta -join ' · ') + '_'); $p.Add('')
+
+  # La reprise ENTIÈRE : c'est ce que la séance vient chercher (ATL-004), rien n'en est coupé.
+  if ($l.reprise) {
+    $d = if ($l.reprise.date) { ' (' + $l.reprise.date + ')' } else { '' }
+    $p.Add('## Reprise' + $d); $p.Add('')
+    if ($l.reprise.arret) { $p.Add('- **Arrêt** — ' + [string]$l.reprise.arret) }
+    if ($l.reprise.reste) { $p.Add('- **Reste** — ' + [string]$l.reprise.reste) }
+    if ($l.reprise.tente) { $p.Add('- **Tenté sans succès** — ' + [string]$l.reprise.tente) }
+    $p.Add('')
+  }
+  if ($l.goal) { $p.Add('## But'); $p.Add(''); $p.Add([string]$l.goal); $p.Add('') }
+
+  $p.Add('## Tickets ouverts (' + $lotOpen.Count + ')'); $p.Add('')
+  if (-not $lotOpen.Count) { $p.Add('_Aucun._') }
+  foreach ($e in $lotOpen) { $p.Add((TicketLine $e)) }
+  $p.Add('')
+  if ($lotPark.Count) {
+    $p.Add('## Hors de l''actionnable (' + $lotPark.Count + ')'); $p.Add('')
+    foreach ($e in $lotPark) { $p.Add((TicketLine $e)) }
+    $p.Add('')
+  }
+  if ($lotDone.Count) {
+    $p.Add('## Livrés (' + $lotDone.Count + ')'); $p.Add('')
+    foreach ($e in $lotDone) { $p.Add('- ' + (IdStr $e) + ' · ' + [string]$e.stat + ' — ' + $e.title) }
+    $p.Add('')
+  }
+
+  # TOUTES les décisions (règle 8 : les relire avant de proposer une approche). Les marquées en
+  # tête, les plus anciennes d'abord — ce sont les fondations ; puis les autres, chronologiques.
+  $decs = @(@($l.decisions) | Where-Object { $_ })
+  $p.Add('## Décisions (' + $decs.Count + ')'); $p.Add('')
+  if (-not $decs.Count) { $p.Add('_Aucune._') }
+  foreach ($dec in @($decs | Where-Object { IsGarde $_ })) { $p.Add((DecisionLine $dec $true)) }
+  foreach ($dec in @($decs | Where-Object { -not (IsGarde $_) })) { $p.Add((DecisionLine $dec $false)) }
+  $p.Add('')
+
+  $lotGains = @($entries | Where-Object { [string]$_.lot -eq $id -and $_.gain } |
+    Sort-Object @{e = { [string]$_.gain.date }} -Descending)
+  if ($lotGains.Count) {
+    $p.Add('## Gains mesurés (' + $lotGains.Count + ')'); $p.Add('')
+    foreach ($e in $lotGains) { $p.Add('- ' + (IdStr $e) + ' · ' + [string]$e.gain.date + ' — ' + (GainStr $e.gain)) }
+  }
+  Utf8Write $Path $p
+}
+
+function Write-LotPages([string]$Dir, $open, $parked, $live) {
+  if ($live.Count -and -not (Test-Path $Dir)) { New-Item -ItemType Directory -Path $Dir | Out-Null }
+  $names = @(); $sizes = @()
+  foreach ($l in $live) {
+    $f = LotFile ([string]$l.id)
+    $names += $f
+    $path = Join-Path $Dir $f
+    Write-LotPage $path $l $open $parked
+    $sizes += (Get-Item $path).Length
+  }
+  # Une page de lot clos se supprime : lue par une séance, elle ferait reprendre un lot fini. Seule
+  # une page qui porte la signature du générateur est supprimée.
+  $removed = @()
+  if (Test-Path $Dir) {
+    foreach ($f in @(Get-ChildItem -Path $Dir -Filter '*.md' -File)) {
+      if ($names -contains $f.Name) { continue }
+      $txt = [IO.File]::ReadAllText($f.FullName)
+      if ($txt.Substring(0, [Math]::Min(600, $txt.Length)).Contains($LOT_MARK)) {
+        Remove-Item -LiteralPath $f.FullName -Force; $removed += $f.Name
       }
     }
-    $blocks += , [pscustomobject]@{
-      Id = [string]$l.id; Head = @($head); Decs = @(@($l.decisions) | Where-Object { $_ })
-      Keep = @(); Omit = ''; Reserve = 0
-    }
   }
-
-  # ---- Ossature : ce qui est déjà écrit, l'identité des lots, la ligne d'omission de chaque
-  # lot qui a des décisions — réservée au pire cas, rendue au budget si le lot passe entier —
-  # et le titre des gains. Cette ligne-là s'affiche justement quand le plafond mord : l'oublier
-  # dans le compte, c'est dépasser le plafond au moment précis où il doit tenir.
-  # ATL-042 — UN GAIN SUIT SON LOT. Les décisions d'un lot clos quittent la projection avec lui
-  # (LotIsClosed) ; ses gains le suivent, pour la même raison — ce fichier est « l'actionnable
-  # seul », et la mesure d'un ticket livré dans un lot clos n'est plus actionnable. Elle reste
-  # entière dans `suivi.md`. Un gain SANS lot n'est archivé par aucune clôture : il reste servi.
-  $liveIds = @($live | ForEach-Object { [string]$_.id })
-  $gAll = @($entries | Where-Object { $_.gain } | Sort-Object @{e = { [string]$_.gain.date }} -Descending)
-  $gains = @($gAll | Where-Object { -not $_.lot -or ($liveIds -contains [string]$_.lot) })
-  $gArch = $gAll.Count - $gains.Count
-  # ATL-042 — PLANCHER, PAS SOLDE. Servis sur le solde, les gains étaient élastiques : ils
-  # s'écrêtaient pour remplir TOUT ce qui restait, si bien qu'aucune place rendue par ailleurs
-  # (décisions sorties au journal, part d'un lot vide) n'arrivait jamais aux décisions — mesuré
-  # le 07/09, les 6 gains affichés étaient les 6 écrêtés. Ils ont donc une allocation fixe,
-  # comptée dans l'ossature : deux mesures, écrêtées, et le reste du plafond va aux décisions.
-  $GAIN_MAX = 2      # gains servis, les plus récents
-  $GAIN_NOTE = 240   # octets de mesure par gain, au plus
-  $gShown = @(); $gClipped = 0
-  foreach ($e in @($gains | Select-Object -First $GAIN_MAX)) {
-    $head = '- ' + (IdStr $e) + ' · ' + [string]$e.gain.date + ' — '
-    $note = GainStr $e.gain
-    if ((LineBytes $note) -le $GAIN_NOTE) { $gShown += , ($head + $note); continue }
-    $gShown += , ($head + (ClipBytes $note $GAIN_NOTE)); $gClipped++
-  }
-  $fixed = BlockBytes $a
-  foreach ($b in $blocks) {
-    $fixed += (BlockBytes $b.Head) + 1                             # +1 : ligne vide de fin de bloc
-    if ($b.Decs.Count) {
-      $tc = (@($b.Decs) | ForEach-Object { ([string]$_.txt).Length } | Measure-Object -Sum).Sum
-      # Pire cas : toutes omises, et toutes les marquées du lot comptées dans la mention.
-      $gc = @($b.Decs | Where-Object { IsGarde $_ }).Count
-      $b.Reserve = [Math]::Max((LineBytes (OmitLine $b.Id $b.Decs.Count $tc $true  $gc)),
-                               (LineBytes (OmitLine $b.Id $b.Decs.Count $tc $false $gc)))
-      $fixed += $b.Reserve
-    }
-  }
-  # Le plancher des gains est de l'ossature, pas du solde : compté ici, jamais pris aux décisions.
-  # Si c'est LUI qui fait déborder, il cède — une fondation du lot en cours passe avant une mesure
-  # déjà livrée. On garde donc le plus grand nombre de gains qui tienne, en lâchant par le bas.
-  $gKeep = $gShown.Count
-  while ($gKeep -gt 0 -and $MaxActifBytes -gt 0 -and ($fixed + (GainsBytes $gShown $gKeep $gains.Count $gArch)) -gt $MaxActifBytes) { $gKeep-- }
-  # Un gain lâché ICI, c'est le plafond qui mord — à distinguer de l'écrêtage à 240 o, qui est
-  # une politique fixe et n'apprend rien sur la pression. Confondre les deux ferait crier
-  # l'avertissement sur un fichier au septième de son plafond, et on cesserait de le lire.
-  $gFloorCut = $gShown.Count - $gKeep
-  if ($gFloorCut -gt 0) { $gShown = @($gShown | Select-Object -First $gKeep); $gClipped = [Math]::Min($gClipped, $gKeep) }
-  $fixed += GainsBytes $gShown $gShown.Count $gains.Count $gArch
-
-  $budget = $UNLIMITED
-  $skeletonOver = $false
-  if ($MaxActifBytes -gt 0) {
-    $budget = [Math]::Max(0, $MaxActifBytes - $fixed)
-    $skeletonOver = ($fixed -gt $MaxActifBytes)
-  }
-
-  # ---- Décisions : part dégressive, le lot en cours d'abord, le reliquat au suivant ----
-  $cutDecs = 0; $cutLots = 0
-  # ATL-042 — le dénominateur ne compte que les lots QUI ONT des décisions. Mesuré le 07/09 :
-  # `$share` était calculé avant le `continue`, si bien qu'un lot sans aucune décision (L-suivi)
-  # emportait un tiers du budget pour rien — et la fondation marquée n° 7 de L-projection sautait
-  # au profit de la plus courte décision non marquée du lot. Une part réservée à ce qui ne sera
-  # pas servi, c'est du plafond dépensé en silence.
-  $rest = @($blocks | Where-Object { $_.Decs.Count }).Count
-  foreach ($b in $blocks) {
-    if (-not $b.Decs.Count) { continue }
-    $share = Share $budget $rest
-    $rest--
-    # ATL-023 — ORDRE DE SERVICE : les marquées d'abord et LES PLUS ANCIENNES EN TÊTE (ce sont les
-    # fondations, celles qu'une séance neuve ignore et doit lire avant de proposer), puis les autres
-    # de la plus récente à la plus ancienne. Seule l'ÉVICTION change : l'affichage reste chronologique.
-    $idx    = @(0..($b.Decs.Count - 1))
-    $gardes = @($idx | Where-Object { IsGarde $b.Decs[$_] })
-    $autres = @($idx | Where-Object { -not (IsGarde $b.Decs[$_]) } | Sort-Object -Descending)
-    $kept = @{}; $spent = 0; $chars = 0
-    foreach ($i in (@($gardes) + @($autres))) {
-      $txt = [string]$b.Decs[$i].txt
-      $line = '- 📌 ' + $(if ($b.Decs[$i].date) { "$($b.Decs[$i].date) — " }) + $txt
-      if ($MaxDecisionChars -gt 0 -and $kept.Count -and ($chars + $txt.Length) -gt $MaxDecisionChars) { break }
-      # Trop grosse pour la place qui reste : on tente la suivante au lieu de tout arrêter. L'ordre
-      # n'étant plus contigu, s'arrêter ferait perdre des fondations à cause d'une seule décision longue.
-      if (($spent + (LineBytes $line)) -gt $share) { continue }
-      $spent += LineBytes $line; $chars += $txt.Length
-      $kept[$i] = $true
-    }
-    $keep    = @($idx | Where-Object { $kept.ContainsKey($_) } | ForEach-Object { $b.Decs[$_] })
-    $cutIdx  = @($idx | Where-Object { -not $kept.ContainsKey($_) })
-    $cut = $cutIdx.Count
-    $b.Keep = $keep
-    $budget -= $spent
-    if ($cut -gt 0) {
-      $om   = (@($cutIdx | ForEach-Object { ([string]$b.Decs[$_].txt).Length }) | Measure-Object -Sum).Sum
-      $cutG = @($cutIdx | Where-Object { IsGarde $b.Decs[$_] }).Count
-      $b.Omit = OmitLine $b.Id $cut $om ($keep.Count -eq 0) $cutG
-      $budget += $b.Reserve - (LineBytes $b.Omit)   # la ligne réelle est plus courte que la réserve
-      $cutDecs += $cut; $cutLots++
-    } else {
-      $budget += $b.Reserve                          # rien d'omis : la réserve va aux lots suivants
-    }
-  }
-
-  foreach ($b in $blocks) {
-    foreach ($h in $b.Head) { $a.Add($h) }
-    if ($b.Omit) { $a.Add($b.Omit) }
-    foreach ($dec in $b.Keep) {
-      $a.Add('- 📌 ' + $(if ($dec.date) { "$($dec.date) — " }) + $dec.txt)
-    }
-    $a.Add('')
-  }
-
-  # ---- Gains mesurés : ce que les tickets livrés ont rapporté (ATL-010) ----
-  # Choisis et écrêtés PLUS HAUT, sur un plancher réservé dans l'ossature (ATL-042) : ici on ne
-  # fait plus que rendre, par la même fonction que celle qui les a réservés. Les annonces sont en
-  # italique et pas en « - » : tools/depots.ps1 ne collecte que les lignes « - ».
-  $gCut = $gains.Count - $gShown.Count
-  foreach ($l in (GainsLines $gShown $gShown.Count $gains.Count $gArch)) { $a.Add($l) }
-
-  [IO.File]::WriteAllText($Path, (($a -join "`n").TrimEnd() + "`n"), (New-Object System.Text.UTF8Encoding($false)))
-  return @{
-    Open = $open.Count; Lots = $live.Count; Size = (Get-Item $Path).Length
-    Cap = $MaxActifBytes; Fixed = $fixed; Skeleton = $skeletonOver
-    CutDecisions = $cutDecs; CutLots = $cutLots; CutGains = $gCut; ClippedGains = $gClipped
-    FloorCutGains = $gFloorCut; LiveGains = $gains.Count; ArchGains = $gArch
-  }
+  $max = if ($sizes.Count) { ($sizes | Measure-Object -Maximum).Maximum } else { 0 }
+  return @{ Pages = $names.Count; Max = [int]$max; Removed = $removed }
 }
 
 $entries = @($state.entries)
@@ -589,28 +529,32 @@ foreach ($s in $STATS) {
 
 
 [IO.File]::WriteAllText($MdPath, ($out -join "`n"), (New-Object System.Text.UTF8Encoding($false)))
-$act = Write-SuiviActif $ActifPath
+
+# Les trois listes se décident sur la CLASSE et non sur le libellé (ATL-044). Un statut de
+# clôture propre au dépôt — « En ligne » chez Sable, « Buildé SW » sur un add-in — sortait de
+# l'actionnable seulement là où son libellé était écrit en dur. 'hors' (Parké, Abandonné) n'est
+# pas masqué pour autant : listé à part, avec sa raison dans le ticket.
+$open = @($entries | Where-Object { -not $_.archived -and @('clos', 'hors') -notcontains (ClasseEntree $_) } |
+  Sort-Object @{e = { PrioRank $_.prio }}, @{e = { [int]$_.n }})
+$parked = @($entries | Where-Object { -not $_.archived -and (ClasseEntree $_) -eq 'hors' } |
+  Sort-Object @{e = { PrioRank $_.prio }}, @{e = { [int]$_.n }})
+$live = @($lots | Where-Object { -not (LotIsClosed $_) } |
+  Sort-Object @{e = { if ($_.order) { [int]$_.order } else { 999 } }}, @{e = { [string]$_.id }})
+$act = Write-SuiviActif $ActifPath $open $parked $live
+$pages = Write-LotPages $LotsDir $open $parked $live
+
 Write-Host ("suivi.md régénéré — {0} entrées, {1} lot(s). Projet : {2}." -f $entries.Count, $lots.Count, $ProjectName)
 # Le repli sur les libellés de référence se DIT (SOCLE.md §4) : sans cette ligne, un dépôt sans
 # bloc `socle` serait lu au dialecte d'un autre sans que rien ne le signale.
 Write-Host ("Socle : {0}." -f $SocleEtat)
-$msg = "suivi-actif.md — {0} ticket(s) ouvert(s), {1} lot(s) non clos, {2} octets" -f $act.Open, $act.Lots, $act.Size
+$msg = "suivi-actif.md (sommaire) — {0} ticket(s) ouvert(s), {1} lot(s) non clos, {2} octets" -f $act.Open, $act.Lots, $act.Size
 if ($act.Cap -gt 0) { $msg += " (plafond {0})" -f $act.Cap }
-# L'écrêtage se dit ici, en information, et non dans l'avertissement du plafond.
-$msg += " — gains : {0} servi(s) sur {1} candidat(s), {2} de lot clos" -f ($act.LiveGains - $act.CutGains), $act.LiveGains, $act.ArchGains
-if ($act.ClippedGains) { $msg += ", {0} écrêté(s) à 240 o" -f $act.ClippedGains }
 Write-Host ($msg + ".")
-# Le plafond ne mord JAMAIS en silence (ATL-013) : une projection qui rétrécit sans le dire,
-# c'est la dérive d'ATL-001 qui recommence.
-if ($act.Skeleton) {
-  Write-Warning ("Plafond {0} o dépassé par la seule ossature ({1} o : {2} ticket(s) ouvert(s) + {3} identité(s) de lot). Aucune décision ni gain affiché : clore des lots ou des tickets, pas baisser le plafond." -f $act.Cap, $act.Fixed, $act.Open, $act.Lots)
-} elseif ($act.CutDecisions -or $act.FloorCutGains) {
-  # ATL-042 — seuls le plafond QUI MORD s'avertit : une décision écartée, ou un gain lâché par
-  # cession du plancher. L'écrêtage d'une note de gain à 240 o est une politique fixe, il ne dit
-  # rien de la pression : avertir dessus faisait crier le générateur sur un fichier au septième
-  # de son plafond, et un avertissement qui crie toujours cesse d'être lu.
-  $bits = @()
-  if ($act.CutDecisions) { $bits += "{0} décision(s) écartée(s) sur {1} lot(s)" -f $act.CutDecisions, $act.CutLots }
-  if ($act.FloorCutGains) { $bits += "{0} gain(s) lâché(s) par cession du plancher" -f $act.FloorCutGains }
-  Write-Warning ("Plafond {0} o atteint — {1}. Rien n'est perdu (suivi.json), mais la réponse est de clore des lots ou d'en sortir les décisions-journal." -f $act.Cap, ($bits -join ", "))
+$msg = "lots\ — {0} page(s) de lot, la plus lourde {1} octets" -f $pages.Pages, $pages.Max
+if ($pages.Removed.Count) { $msg += " ; supprimée(s), lot clos : {0}" -f ($pages.Removed -join ', ') }
+Write-Host ($msg + ".")
+# Le plafond ne coupe plus rien (ATL-162) mais ne se franchit JAMAIS en silence (ATL-013). Le
+# sommaire ne grossit qu'avec les lots non clos et les tickets sans lot : c'est à eux de répondre.
+if ($act.Cap -gt 0 -and $act.Size -gt $act.Cap) {
+  Write-Warning ("Sommaire au-dessus du plafond : {0} o pour {1}. Rien n'est coupé ; la réponse est de clore des lots, ou de ranger les tickets sans lot dans un lot." -f $act.Size, $act.Cap)
 }
