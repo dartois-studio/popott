@@ -20,6 +20,7 @@
 .claude/suivi-projet*.html  -text
 .claude/generate-suivi.ps1  -text
 .claude/sync-pr.ps1         -text
+.claude/lots/*.md           -text
 
 # Et ce fichier lui-meme, sinon git avertit a chaque `add` qu il le convertira.
 .gitattributes              -text
