@@ -1079,8 +1079,8 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.6";
-const PAGE_VERSION_DATE = "2026-09-23";
+const PAGE_VERSION = "1.7";
+const PAGE_VERSION_DATE = "2026-09-28";
 
 /* Dérivés de la config (ne pas éditer) */
 const DLV = PROJECT.delivery;
@@ -1781,6 +1781,39 @@ function mergeEntity(loc, bas, dsk){
   }
   return merged;
 }
+/* ATL-169 — un numéro de ticket se CALCULE, il ne se compte pas. `nextId` seul ne suffit pas : le
+   23/09/2026, une séance a inscrit un ticket à la main sans l'avancer, et la page a donné le même
+   n: 162 au suivant. Le numéro libre est donc le plus grand pris — corbeille comprise, un ticket
+   qui y dort peut revenir — ou `nextId - 1` s'il est plus loin (un numéro purgé ne se réemploie
+   pas), plus un. `extra` : des numéros pris ailleurs, ceux du disque pendant une fusion. */
+function nextFreeN(extra){
+  let m=(state.nextId||1)-1;
+  for(const x of state.entries) if(x.n>m) m=x.n;
+  for(const x of (state.trash&&state.trash.entries)||[]) if(x.n>m) m=x.n;
+  for(const n of extra||[]) if(n>m) m=n;
+  return m+1;
+}
+/* ATL-169 — un numéro reste PROVISOIRE tant que le ticket n'a pas été écrit. Un ticket local
+   absent de la base n'a jamais atteint le disque : si le disque porte le même numéro sur un autre
+   contenu (une séance l'a inscrit entre-temps), c'est le local qui cède et prend le premier numéro
+   libre. Sans cette passe, mergeList voyait « la même clé créée des deux côtés » et gardait le
+   local : le ticket du disque disparaissait sans un mot. Rend les renumérotations [avant, après]. */
+function renumberLocalCollisions(disk, bas){
+  const inBase=new Set([...(bas.entries||[]), ...((bas.trash||{}).entries||[])].map(x=>x.n));
+  const onDisk=new Map([...(disk.entries||[]), ...((disk.trash||{}).entries||[])].map(x=>[x.n,x]));
+  const moved=[];
+  let next=Math.max(nextFreeN([...onDisk.keys()]), disk.nextId||1);
+  for(const e of [...state.entries, ...state.trash.entries]){
+    if(inBase.has(e.n)) continue;                                // déjà écrit : ce numéro est le sien
+    const d=onDisk.get(e.n);
+    if(!d || entSig(d)===entSig(e)) continue;                    // numéro libre sur disque, ou même ticket
+    moved.push([e.n, next]);
+    if(editingId===e.n) editingId=next;
+    if(navType==="ticket" && navKey===e.n) navKey=next;
+    e.n=next++;
+  }
+  return moved;
+}
 function mergeList(locArr, basArr, dskArr, keyOf){
   const bas=new Map((basArr||[]).map(x=>[keyOf(x),x])), loc=new Map((locArr||[]).map(x=>[keyOf(x),x]));
   const out=[], seen=new Set();
@@ -1791,7 +1824,7 @@ function mergeList(locArr, basArr, dskArr, keyOf){
       if(entSig(d)!==entSig(b)) out.push(d);                    // supprimé localement MAIS modifié sur disque → garder (sécurité) ; sinon suppression respectée
       continue;
     }
-    if(!b){ out.push(l); continue; }                            // même clé créée des deux côtés (improbable) → local
+    if(!b){ out.push(l); continue; }                            // même clé créée des deux côtés : pour un ticket, renumberLocalCollisions a déjà séparé deux contenus différents → ici, le même
     out.push(mergeEntity(l, b, d));
   }
   for(const l of (locArr||[])){
@@ -1804,9 +1837,9 @@ function mergeList(locArr, basArr, dskArr, keyOf){
 }
 function mergeExternal(disk){
   const bas=baseState||{};
+  const moved = renumberLocalCollisions(disk, bas);
   state.entries = mergeList(state.entries, bas.entries, disk.entries, x=>x.n);
   state.lots    = mergeList(state.lots,    bas.lots,    disk.lots,    x=>x.id);
-  state.nextId  = Math.max(state.nextId||1, disk.nextId||1);
   ["categories","types"].forEach(k=>{                            // listes : on ajoute ce qui est NOUVEAU côté disque (les retraits locaux sont respectés)
     const dk=disk[k]||[], bk=bas[k]||[];
     const added=dk.filter(v=>!bk.includes(v) && !(state[k]||[]).includes(v));
@@ -1824,12 +1857,14 @@ function mergeExternal(disk){
   const vivants=new Set(state.entries.map(x=>x.n)), vivantsL=new Set(state.lots.map(x=>x.id));
   state.trash.entries = state.trash.entries.filter(x=>!vivants.has(x.n));
   state.trash.lots    = state.trash.lots.filter(x=>!vivantsL.has(x.id));
+  state.nextId  = Math.max(state.nextId||1, disk.nextId||1, nextFreeN());   // ATL-169 — répare aussi un nextId laissé en retard sur disque
   if(JSON.stringify(state.defaults)===JSON.stringify(bas.defaults) && disk.defaults) state.defaults=disk.defaults;
   /* ATL-044 — le bloc `socle` (le contrat de données du dépôt : classes de statut, extensions)
      s'écrit À LA MAIN dans suivi.json et JAMAIS par cette page. Le disque a donc toujours
      raison : sans cette ligne, une page ouverte avant l'ajout du bloc l'effacerait à la
      sauvegarde suivante, et le dépôt retomberait en version 0 sans un mot. */
   if(disk.socle) state.socle = disk.socle;
+  return moved;
 }
 
 /* ---------- Sauvegarde ---------- */
@@ -1847,10 +1882,12 @@ async function saveAll(){
           const disk = JSON.parse(await (await fh.getFile()).text());
           if(disk && Array.isArray(disk.entries)){
             backupLocalToLS();                                   // filet de sécurité avant fusion
-            mergeExternal(disk);
+            const moved = mergeExternal(disk);
             await hydrateCaptures(state);                        // vignettes des entités reprises du disque
             render(); rebuildDynamicSelects();
-            toast("⚡ Modifs de Claude fusionnées avant l'enregistrement.");
+            const f = n => idStr({n});
+            toast("⚡ Modifs de Claude fusionnées avant l'enregistrement."
+              + (moved.length ? " Numéro déjà pris sur disque → ton ticket devient " + moved.map(([a,b])=>f(a)+" → "+f(b)).join(", ") + "." : ""));
           }
         } catch(e){ /* fusion impossible (json illisible…) → on écrit l'état local, comportement historique */ }
       }
@@ -2161,7 +2198,7 @@ function submitForm(){
   if(!title){ $("#fTitle").focus(); flash($("#addHint"),"Donne au moins un titre."); return; }
   const existing=editingId ? state.entries.find(x=>x.n===editingId) : null;
   const manualCoder=existing ? $("#fCoderManual").value.trim() : "";
-  const attributionTarget=existing ? Object.assign({},existing,{codedWith:manualCoder}) : {n:state.nextId,codedWith:""};
+  const attributionTarget=existing ? Object.assign({},existing,{codedWith:manualCoder}) : {n:nextFreeN(),codedWith:""};
   if($("#fStat").value==="Fait" && !ensureCoderAttribution([attributionTarget])) return;
   const caps = pending.map(c=>({name:c.name,dataUrl:c.dataUrl}));
   const common = { title, desc:$("#fDesc").value.trim(), type:$("#fType").value, dom:$("#fDom").value,
@@ -2175,7 +2212,7 @@ function submitForm(){
     // pour que le premier enregistrement n'ajoute pas un `"model": ""` à chaque ticket du fichier.
     const manualModel=$("#fModel").value.trim();
     if(manualModel) existing.model=manualModel; else delete existing.model; }
-  else { savedN=state.nextId; state.entries.push(Object.assign({ n:state.nextId++, created:todayISO() }, common)); }
+  else { savedN=nextFreeN(); state.nextId=savedN+1; state.entries.push(Object.assign({ n:savedN, created:todayISO() }, common)); }
   rebuildDynamicSelects(); resetForm(); render(); scheduleSave();
   if(wasNew){ closeDetail(); }
   else {   // retour à la lecture dans le même pop-up
@@ -2208,7 +2245,7 @@ function setStatus(id,val){
 function dupEntry(id){
   const e=state.entries.find(x=>x.n===id); if(!e) return;
   const clone=JSON.parse(JSON.stringify(e));
-  clone.n=state.nextId++;
+  clone.n=nextFreeN(); state.nextId=clone.n+1;
   clone.title=(e.title||"(sans titre)")+" (copie)";
   clone.created=todayISO(); clone.updated=todayISO();
   clone.codedWith="";
@@ -2217,6 +2254,7 @@ function dupEntry(id){
   const idx=state.entries.findIndex(x=>x.n===id);
   state.entries.splice(idx<0?state.entries.length:idx+1, 0, clone);
   render(); scheduleSave(); toast("Dupliqué → "+idStr(clone));
+  return clone.n;
 }
 
 /* ---------- Groupement (Cartes / Liste / colonnes Kanban) ---------- */
@@ -4032,7 +4070,7 @@ function wire(){
   /* --- Pop-up ticket --- */
   $("#newEntryBtn").onclick=openTicketNew;
   $("#tkEditBtn").onclick=tkEnterEdit;
-  $("#tkDupBtn").onclick=()=>{ const before=state.nextId; dupEntry(navKey); openTicketDetail(before); };
+  $("#tkDupBtn").onclick=()=>{ const n=dupEntry(navKey); if(n!=null) openTicketDetail(n); };
   $("#tkAbandonBtn").onclick=()=>{ if(navKey==null) return; abandonEntry(navKey); openTicketDetail(navKey,{keep:true}); };
   $("#tkArchBtn").onclick=()=>{ const e=state.entries.find(x=>x.n===navKey); if(!e) return; if(e.archived) unarchiveEntry(e.n); else archiveEntry(e.n); openTicketDetail(navKey,{keep:true}); };
   $("#tkDelBtn").onclick=()=>{ const n=navKey; delEntry(n); if(!state.entries.find(x=>x.n===n)) closeDetail(); };

@@ -450,6 +450,16 @@ function Write-LotPages([string]$Dir, $open, $parked, $live) {
 
 $entries = @($state.entries)
 $lots = @(); if ($state.lots) { $lots = @($state.lots) }
+# ATL-169 — un numéro de ticket se vérifie, il ne se compte pas. Le 23/09/2026, deux entrées
+# d'Atelier ont porté n: 162 (l'une inscrite à la main sans avancer `nextId`, l'autre créée par
+# la page sur ce `nextId` resté en retard) et ce générateur a annoncé « 166 entrées » sans un mot.
+# Le relevé couvre la corbeille : un numéro qui y dort est pris, il peut être restauré.
+$tousN = @($entries | ForEach-Object { [int]$_.n })
+if ($state.trash -and $state.trash.entries) { $tousN += @($state.trash.entries | ForEach-Object { [int]$_.n }) }
+$Doublons = @($tousN | Group-Object | Where-Object { $_.Count -gt 1 } |
+  ForEach-Object { '{0}-{1:000} ({2} fois)' -f $Prefix, [int]$_.Name, $_.Count })
+$MaxN = if ($tousN.Count) { ($tousN | Measure-Object -Maximum).Maximum } else { 0 }
+$NextIdRetard = ([int]$state.nextId -le $MaxN)
 $out = New-Object System.Collections.Generic.List[string]
 
 $out.Add('# Suivi ' + $ProjectName); $out.Add('')
@@ -557,4 +567,10 @@ Write-Host ($msg + ".")
 # sommaire ne grossit qu'avec les lots non clos et les tickets sans lot : c'est à eux de répondre.
 if ($act.Cap -gt 0 -and $act.Size -gt $act.Cap) {
   Write-Warning ("Sommaire au-dessus du plafond : {0} o pour {1}. Rien n'est coupé ; la réponse est de clore des lots, ou de ranger les tickets sans lot dans un lot." -f $act.Size, $act.Cap)
+}
+if ($Doublons.Count) {
+  Write-Warning ("Numéro de ticket en double (corbeille comprise) : {0}. Deux tickets distincts portent le même identifiant : renuméroter le plus récent au premier numéro libre (node ..\Atelier\tools\ticket.js le donne)." -f ($Doublons -join ', '))
+}
+if ($NextIdRetard) {
+  Write-Warning ("nextId en retard : {0}, alors que le plus grand numéro pris est {1}. La page de suivi n'en dépend plus, mais une écriture à la main qui s'y fierait reprendrait un numéro déjà pris." -f [int]$state.nextId, $MaxN)
 }
