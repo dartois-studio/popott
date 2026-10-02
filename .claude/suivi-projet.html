@@ -127,6 +127,8 @@
   textarea.ctrl { resize: vertical; min-height: 84px; }
   .grid5 { display: grid; gap: 10px; grid-template-columns: repeat(5, 1fr); margin-top: 10px; }
   @media (max-width: 820px) { .grid5 { grid-template-columns: 1fr 1fr; } }
+  .grid5.six { grid-template-columns: repeat(7, 1fr); }
+  @media (max-width: 820px) { .grid5.six { grid-template-columns: 1fr 1fr; } }
   .manual-coder { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--border-strong); border-radius: 8px; background: var(--panel-2); }
   .manual-coder .hint { margin-top: 4px; color: var(--muted); font-size: 11.5px; }
   .row2 { display: grid; grid-template-columns: 1fr 280px; gap: 10px; margin-top: 10px; align-items: stretch; }
@@ -608,6 +610,49 @@
   .t-prios { white-space:nowrap; }
   .prio-chip { display:inline-flex; align-items:center; gap:3px; margin-right:7px; font-size:11.5px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; }
   .prio-chip .p-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  /* ATL-177 — la ligne d'avancement : UNE ligne compacte (pourcentage, lots livrés, un segment numéroté par
+     lot ouvert). Guillaume est daltonien : la couleur ne porte jamais le sens seule — le numéro nomme le lot,
+     un cadre épais et un chiffre gras marquent le lot au travail, le survol donne le nom complet. Bleu pâle
+     pour ce qui est fait, ambre très doux pour ce qui est en cours (mélangés au fond : sobres en clair
+     comme en sombre) ; seul le travail ouvert garde du poids. Pas de vert, pas de rouge. */
+  .progress { --pg-fait:color-mix(in srgb, #0072B2 24%, var(--panel)); --pg-pr:color-mix(in srgb, #0072B2 14%, var(--panel));
+              --pg-cours:color-mix(in srgb, #E69F00 28%, var(--panel));
+              margin:10px 0 18px; padding:6px 14px; background:var(--panel); border:1px solid var(--border); border-radius:10px; }
+  .progress.hidden { display:none; }
+  .prog-row { display:flex; align-items:center; gap:12px; min-height:30px; }
+  .prog-pct { font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .prog-fold { padding:0; border:0; background:none; font:inherit; font-size:12px; color:var(--muted); cursor:pointer; white-space:nowrap; }
+  .prog-fold:hover { color:var(--text); }
+  .prog-bar { flex:1; min-width:0; display:flex; gap:2px; height:20px; }
+  .prog-seg { flex:1 1 0; min-width:22px; position:relative; display:flex; align-items:center; justify-content:center; background:var(--panel-2); border:1px solid var(--border-strong); border-radius:3px; overflow:hidden; cursor:pointer; font-size:11px; line-height:1; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .prog-seg > i { position:absolute; top:0; bottom:0; left:0; display:block; }
+  .prog-seg > i + i { border-left:1px solid var(--panel); }
+  .prog-seg > span { position:relative; }
+  .prog-seg.tr { border:1.5px solid var(--text); color:var(--text); font-weight:700; }
+  .prog-seg:hover { outline:2px solid var(--muted); outline-offset:1px; }
+  .ps-done { background:var(--pg-fait); }
+  .ps-pr { background:var(--pg-pr); }
+  .ps-doing { background:var(--pg-cours); }
+  .prog-warn { font-size:11.5px; color:var(--muted); border:1px dashed var(--border-strong); border-radius:6px; padding:1px 6px; white-space:nowrap; }
+  .prog-livrow { display:flex; gap:2px; height:10px; margin:0 0 6px; }
+  .prog-livseg { flex:1 1 0; min-width:2px; background:var(--pg-pr); border:1px solid var(--pg-fait); border-radius:2px; cursor:pointer; }
+  .prog-livseg:hover { outline:2px solid var(--muted); outline-offset:1px; }
+  /* Infobulle de la page (initTooltips) : sombre en clair, claire en sombre — toujours en contraste avec le fond. */
+  #tip { position:fixed; z-index:200; left:0; top:0; max-width:340px; padding:7px 11px; border-radius:8px; pointer-events:none;
+         background:var(--text); color:var(--bg); font-size:12.5px; line-height:1.4; white-space:pre-line; overflow-wrap:anywhere;
+         box-shadow:0 6px 20px rgba(20,25,30,.22); opacity:0; transform:translateY(3px); transition:opacity .12s ease, transform .12s ease; }
+  #tip .th { font-weight:700; }
+  #tip .th + .tl { margin-top:4px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--bg) 22%, transparent); }
+  #tip .tl { color:color-mix(in srgb, var(--bg) 78%, var(--text)); font-size:12px; }
+  #tip .tc { font-style:italic; }
+  .lotrow.flash > td { animation:lotflash 1.6s ease-out; }
+  @keyframes lotflash { from { background:color-mix(in srgb, #0072B2 24%, transparent); } to { background:transparent; } }
+  @media (prefers-reduced-motion: reduce) { .lotrow.flash > td { animation:none; } }
+  #tip.below { transform:translateY(-3px); }
+  #tip.on { opacity:1; transform:none; }
+  #tip::after { content:""; position:absolute; left:var(--ax,50%); bottom:-4px; width:8px; height:8px; margin-left:-4px; background:inherit; transform:rotate(45deg); }
+  #tip.below::after { bottom:auto; top:-4px; }
+  @media (prefers-reduced-motion: reduce) { #tip { transition:none; } }
 </style>
 </head>
 <body>
@@ -628,9 +673,12 @@
       <button class="btn sm ghost" id="connectBtn" title="Écrire suivi.json / suivi.md dans le dossier .claude">Connecter .claude</button>
       <button class="btn sm ghost" id="reloadBtn" title="Recharger depuis .claude (utile après une modif de Claude)">↻</button>
     </div>
+    <a class="btn sm ghost hidden" id="githubLink" target="_blank" rel="noopener noreferrer" title="Ouvrir le dépôt du projet sur GitHub">GitHub ↗</a>
     <button class="btn sm" id="helpBtn" title="Comment ça marche ?">? Aide</button>
     <button class="btn sm ghost" id="themeBtn" title="Basculer clair/sombre">◐</button>
   </header>
+
+  <section class="progress hidden" id="progress" aria-label="Avancement du projet"></section>
 
   <!-- ------- Pop-up ticket : lecture + édition (formulaire) ------- -->
   <div class="modal" id="ticketModal">
@@ -656,7 +704,7 @@
       <label>Titre</label>
       <input class="ctrl" id="fTitle" placeholder="Ex. : Le gizmo saute quand on relâche la souris">
     </div>
-    <div class="grid5">
+    <div class="grid5 six">
       <div class="field">
         <div class="lblrow"><label>Type</label><button class="mini" id="typeManageLink" type="button">⚙ gérer</button></div>
         <select class="ctrl" id="fType"></select>
@@ -672,6 +720,14 @@
       <div class="field">
         <div class="lblrow"><label>Priorité</label></div>
         <select class="ctrl" id="fPrio"></select>
+      </div>
+      <div class="field">
+        <div class="lblrow"><label>Difficulté</label></div>
+        <select class="ctrl" id="fDiff"></select>
+      </div>
+      <div class="field">
+        <div class="lblrow"><label>Rapidité</label></div>
+        <select class="ctrl" id="fRap"></select>
       </div>
       <div class="field">
         <div class="lblrow"><label>Statut</label></div>
@@ -798,6 +854,8 @@
               <option value="lot">Lot</option>
               <option value="coder">Codé avec</option>
               <option value="model">Modèle</option>
+              <option value="diff">Difficulté</option>
+              <option value="rap">Rapidité</option>
             </select>
           </div>
           <div class="fp-row" id="colToggles"><label>Colonnes affichées</label><div id="colTogglesList"></div></div>
@@ -956,8 +1014,8 @@
     <div class="modal-foot" style="justify-content:space-between;gap:8px;flex-wrap:wrap">
       <button class="btn ghost" id="conflictCancel">Annuler</button>
       <span style="flex:1"></span>
-      <button class="btn" id="conflictLoadDisk">Charger la version .claude</button>
-      <button class="btn primary" id="conflictKeepLocal">Garder mes saisies locales</button>
+      <button class="btn primary" id="conflictLoadDisk">Charger la version .claude</button>
+      <button class="btn" id="conflictKeepLocal">Garder mes saisies locales</button>
     </div>
   </div>
 </div>
@@ -1031,6 +1089,7 @@
    instancier un nouveau suivi. Doc complète : README.md du template.
    ========================================================================= */
 const PROJECT = {
+  github:    "https://github.com/dartois-studio/popott", // relevé depuis le remote origin
   /* --- Identité --- */
   name:      "popott",                 // nom affiché (en-tête, titre d’onglet, titre du suivi.md)
   tagline:   "Suivi projet — features, bugs & idées",
@@ -1079,8 +1138,8 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.7";
-const PAGE_VERSION_DATE = "2026-09-28";
+const PAGE_VERSION = "1.21";
+const PAGE_VERSION_DATE = "2026-10-02";
 
 /* Dérivés de la config (ne pas éditer) */
 const DLV = PROJECT.delivery;
@@ -1173,8 +1232,8 @@ function extKvHtml(o, portee){
 const CODERS  = ["", ...PROJECT.coders];
 const CODER_LABEL = Object.assign({ "":"Non renseigné" }, ...PROJECT.coders.map(c=>({[c]:c})));
 const CODER_FILTER_LABEL = Object.assign({ "":"Tous les outils de code", "__none__":"Non renseigné" }, ...PROJECT.coders.map(c=>({[c]:c})));
-/* ATL-161 — le MODÈLE derrière l'outil (`model`), à côté de `codedWith` qui dit l'outil. Facultatif,
-   jamais exigé avant Fait. La liste vit ici, hors du bloc CONFIG, pour arriver dans chaque dépôt
+/* ATL-161 — le MODÈLE derrière l'outil (`model`), à côté de `codedWith` qui dit l'outil. Exigé avant Fait
+   depuis ATL-176 (02/10/2026), absent plutôt que deviné quand il est inconnu. La liste vit ici, hors du bloc CONFIG, pour arriver dans chaque dépôt
    par la propagation ; un dépôt peut la remplacer par `PROJECT.models`. Toute autre valeur écrite
    dans le fichier s'ajoute d'elle-même aux filtres (allModelValues), comme pour « Codé avec ». */
 const MODELS = Array.isArray(PROJECT.models) ? PROJECT.models : ["Opus 5.5", "Opus 5", "Sonnet 5", "Haiku 4.5", "Fable 5.1", "Mixte"];
@@ -1182,8 +1241,8 @@ const modelLabel = v => v || "Non renseigné";
 const prioRank = p => PRIOS.indexOf(p);
 
 /* Filtres façon Notion : liste ordonnée de {key, op, values}. Une pilule par propriété. */
-const FILTER_KEYS = ["dom","type","lot","prio","stat","coder","model"];
-const FILTER_LABEL = { dom:"Catégorie", type:"Type", lot:"Lot", prio:"Priorité", stat:"Statut", coder:"Codé avec", model:"Modèle" };
+const FILTER_KEYS = ["dom","type","lot","prio","stat","coder","model","diff","reco","rap"];
+const FILTER_LABEL = { dom:"Catégorie", type:"Type", lot:"Lot", prio:"Priorité", stat:"Statut", coder:"Codé avec", model:"Modèle", diff:"Difficulté", reco:"Conseillé", rap:"Rapidité" };
 function normFilters(a){
   if(Array.isArray(a)){
     return a.filter(f=>f && FILTER_KEYS.includes(f.key))
@@ -1479,7 +1538,7 @@ async function reconcileWithDisk(){
 
 /* ---------- Diff local ↔ disque ---------- */
 const CMP_FIELDS = [["title","Titre"],["desc","Description"],["type","Type"],["dom","Catégorie"],
-                    ["lot","Lot"],["prio","Priorité"],["stat","Statut"],["codedWith","Codé avec"],["model","Modèle"]];
+                    ["lot","Lot"],["prio","Priorité"],["stat","Statut"],["codedWith","Codé avec"],["model","Modèle"],["difficulty","Difficulté"],["modelReco","Conseillé (correction)"],["rapidite","Rapidité"]];
 function byId(s){ const m={}; (s.entries||[]).forEach(e=>m[e.n]=e); return m; }
 function diffStates(local, disk){
   const A = byId(local), B = byId(disk);
@@ -1954,7 +2013,7 @@ function buildMarkdown(capMap){
     if(!rows.length) continue;
     L.push(`### ${g.name} — ${rows.length}`);
     for(const e of rows){
-      const coded = (e.codedWith ? ` · Codé avec **${coderLabel(e.codedWith)}**` : "") + (e.model ? ` · Modèle **${e.model}**` : "");
+      const coded = (e.codedWith ? ` · Codé avec **${coderLabel(e.codedWith)}**` : "") + (e.model ? ` · Modèle **${e.model}**` : "") + (e.difficulty ? ` · Difficulté **${e.difficulty}**` : "") + (recoModel(e) ? ` · Conseillé **${recoModel(e)}**` : "") + (e.rapidite ? ` · Rapidité **${e.rapidite}**` : "");
       L.push(`- ${idStr(e)} · ${e.prio} · **${e.stat}** · _${e.type}_ — ${e.title}${coded}`);
     }
     L.push("");
@@ -1976,7 +2035,7 @@ function buildMarkdown(capMap){
       caps.forEach((rel,i)=> L.push(`![${idStr(e)} capture ${i+1}](${rel})`));
       if(!caps.length && (e.captures||[]).length) L.push(`_(${e.captures.length} capture(s) — connecter .claude pour les écrire en PNG)_`);
       if(caps.length) L.push("");
-      const coded = (e.codedWith ? ` · Codé avec ${coderLabel(e.codedWith)}` : "") + (e.model ? ` · Modèle ${e.model}` : "");
+      const coded = (e.codedWith ? ` · Codé avec ${coderLabel(e.codedWith)}` : "") + (e.model ? ` · Modèle ${e.model}` : "") + (e.difficulty ? ` · Difficulté ${e.difficulty}` : "") + (recoModel(e) ? ` · Conseillé ${recoModel(e)}` : "") + (e.rapidite ? ` · Rapidité ${e.rapidite}` : "");
       L.push(`<sub>créé le ${e.created}${e.updated&&e.updated!==e.created?` · maj ${e.updated}`:""}${coded}</sub>`,"");
     }
   }
@@ -2004,7 +2063,7 @@ function resetForm(){
   editingId=null; pending=[];
   $("#fTitle").value=""; $("#fDesc").value="";
   $("#fType").value=state.defaults.types||state.types[0]||""; $("#fDom").value=state.defaults.categories||state.categories[0]||"";
-  $("#fLot").value=""; $("#fPrio").value="P2"; $("#fStat").value="À faire";
+  $("#fLot").value=""; $("#fPrio").value="P2"; $("#fStat").value="À faire"; $("#fDiff").value=""; $("#fRap").value="";
   $("#fCoderManual").value=""; $("#fModel").value=""; $("#manualCoderField").classList.add("hidden");
   renderPending();
 }
@@ -2012,7 +2071,7 @@ function fillForm(e){
   editingId=e.n; pending=(e.captures||[]).map(c=>({name:c.name,dataUrl:c.dataUrl}));
   $("#fTitle").value=e.title||""; $("#fDesc").value=e.desc||"";
   $("#fType").value=e.type; $("#fDom").value=e.dom;
-  $("#fLot").value=e.lot||""; $("#fPrio").value=e.prio; $("#fStat").value=e.stat;
+  $("#fLot").value=e.lot||""; $("#fPrio").value=e.prio; $("#fStat").value=e.stat; $("#fDiff").value=e.difficulty||""; $("#fRap").value=e.rapidite||"";
   $("#fCoderManual").value=e.codedWith||""; $("#fModel").value=e.model||""; $("#manualCoderField").classList.remove("hidden");
   renderPending();
 }
@@ -2025,7 +2084,7 @@ function fillForm(e){
    formulaire plein ne prouve rien. On compare l'état courant à l'instantané pris au moment
    d'entrer en édition. C'est aussi ce qui distingue ces fonctions de `formBusy()`, qui répond à
    une autre question — « y a-t-il quelque chose à l'écran ? » — pour l'auto-rechargement. */
-const TK_FIELDS  = ["fTitle","fDesc","fType","fDom","fLot","fPrio","fStat","fCoderManual","fModel"];
+const TK_FIELDS  = ["fTitle","fDesc","fType","fDom","fLot","fPrio","fStat","fDiff","fRap","fCoderManual","fModel"];
 const LOT_FIELDS = ["leName","leGoal","leBranch","lePr","leOrder"];
 const ABANDON_MSG = "Cette saisie n'est pas enregistrée. L'abandonner ?";
 let tkClean="", lotClean="";
@@ -2089,7 +2148,10 @@ function buildTicketRead(e){
     `<span class="st-select ${STAT_CLASS[e.stat]||''}">${esc(e.stat||'')}</span>`,
     e.lot?`<span class="badge lot clickable" onclick="navLot('${esc(e.lot)}')">${esc(l?l.name:lotName(e.lot))}</span>`:'',
     e.codedWith?`<span class="badge">🤖 ${esc(coderLabel(e.codedWith))}</span>`:'',
-    e.model?`<span class="badge" title="Modèle">🧠 ${esc(e.model)}</span>`:''
+    e.model?`<span class="badge" title="Modèle">🧠 ${esc(e.model)}</span>`:'',
+    diffBadgeHtml(e),
+    rapBadgeHtml(e),
+    recoModel(e)?`<span class="badge" title="Modèle conseillé (calculé d'après la difficulté)">💡 ${esc(recoModel(e))}</span>`:''
   ].filter(Boolean).join("");
   let h=`<div class="metarow">${badges}</div>`;
   h+=`<div class="det-desc">${e.desc?esc(e.desc):'<span style="color:var(--muted)">— aucune description —</span>'}</div>`;
@@ -2205,14 +2267,18 @@ function submitForm(){
                    lot:$("#fLot").value, prio:$("#fPrio").value, stat:$("#fStat").value,
                    captures:caps, updated:todayISO() };
   if(existing) common.codedWith=manualCoder;
+  // ATL-173 — `difficulty` n'est écrite que remplie, comme `model` : pas de clé vide ajoutée à chaque ticket.
+  const diffVal=$("#fDiff").value, rapVal=$("#fRap").value;
   const wasNew = !editingId;
   let savedN;
   if(editingId){ savedN=editingId; Object.assign(existing, common);
     // ATL-161 — `model` n'est écrit que rempli : un ticket sans modèle n'en porte pas la clé,
     // pour que le premier enregistrement n'ajoute pas un `"model": ""` à chaque ticket du fichier.
     const manualModel=$("#fModel").value.trim();
-    if(manualModel) existing.model=manualModel; else delete existing.model; }
-  else { savedN=nextFreeN(); state.nextId=savedN+1; state.entries.push(Object.assign({ n:savedN, created:todayISO() }, common)); }
+    if(manualModel) existing.model=manualModel; else delete existing.model;
+    if(diffVal) existing.difficulty=diffVal; else delete existing.difficulty;
+    if(rapVal) existing.rapidite=rapVal; else delete existing.rapidite; }
+  else { savedN=nextFreeN(); state.nextId=savedN+1; const ne=Object.assign({ n:savedN, created:todayISO() }, common); if(diffVal) ne.difficulty=diffVal; if(rapVal) ne.rapidite=rapVal; state.entries.push(ne); }
   rebuildDynamicSelects(); resetForm(); render(); scheduleSave();
   if(wasNew){ closeDetail(); }
   else {   // retour à la lecture dans le même pop-up
@@ -2258,7 +2324,7 @@ function dupEntry(id){
 }
 
 /* ---------- Groupement (Cartes / Liste / colonnes Kanban) ---------- */
-const GROUP_FIELD = { stat:"stat", dom:"dom", type:"type", prio:"prio", lot:"lot", coder:"codedWith", model:"model" };
+const GROUP_FIELD = { stat:"stat", dom:"dom", type:"type", prio:"prio", lot:"lot", coder:"codedWith", model:"model", diff:"difficulty", rap:"rapidite" };
 /* Domaine ordonné d'un axe de groupement : liste des groupes {key,name,short?,dot?} */
 function groupDomain(key){
   if(key==="stat") return STATS.map(s=>({ key:s, name:s, dot:`var(--${STAT_CLASS[s]})` }));
@@ -2268,6 +2334,8 @@ function groupDomain(key){
   if(key==="lot")  return [...state.lots.map(l=>({ key:l.id, name:l.name })), { key:"", name:"Sans lot" }];
   if(key==="coder") return [{ key:"", name:"Non renseigné" }, ...allCoderValues().map(v=>({ key:v, name:`Codé avec ${coderLabel(v)}` }))];
   if(key==="model") return [{ key:"", name:"Modèle non renseigné" }, ...allModelValues().map(v=>({ key:v, name:`Modèle ${v}` }))];
+  if(key==="diff") return [...DIFF_ORDER.map(v=>({ key:v, name:`Difficulté ${v}` })), { key:"", name:"Difficulté non renseignée" }];
+  if(key==="rap")  return [...RAP_ORDER.map(v=>({ key:v, name:`Rapidité ${v}` })), { key:"", name:"Rapidité non renseignée" }];
   return [];
 }
 function groupValue(e,key){ const f=GROUP_FIELD[key]; return f ? (e[f]||"") : ""; }
@@ -2925,9 +2993,14 @@ function lotIdFromName(name){
   if(!state.lots.some(l=>l.id===base)) return base;
   for(let i=2;;i++){ const c=base+"-"+i; if(!state.lots.some(l=>l.id===c)) return c; }
 }
+function nextLotOrder(){
+  // order est le numéro affiché ; réserver aussi ceux des archives et de la corbeille.
+  const lots=[...state.lots,...(state.trash?.lots||[])];
+  return Math.floor(lots.reduce((max,l)=>Number.isFinite(l.order)?Math.max(max,l.order):max,0))+1;
+}
 function addLot(name){
   const v=(name!==undefined?name:$("#lotNew").value).trim(); if(!v) return null;
-  const lot={ id:lotIdFromName(v), name:v };
+  const lot={ id:lotIdFromName(v), name:v, order:nextLotOrder() };
   state.lots.push(lot); if(name===undefined) $("#lotNew").value="";
   rebuildManageLists(); rebuildDynamicSelects(); scheduleSave(); return lot;
 }
@@ -2948,7 +3021,9 @@ function deleteLot(i){
 /* ---------- Filtre + tri ---------- */
 /* Modèle « barre de filtres » façon Notion : liste ordonnée de {key, op, values}, une entrée par propriété.
    op = "is" (est) | "not" (n'est pas) | "empty" (est vide). Chaque filtre = une pilule cliquable de la barre. */
-const FILTER_FIELD = { dom:"dom", type:"type", lot:"lot", prio:"prio", stat:"stat", coder:"codedWith", model:"model" };
+const FILTER_FIELD = { dom:"dom", type:"type", lot:"lot", prio:"prio", stat:"stat", coder:"codedWith", model:"model", diff:"difficulty", reco:"modelReco", rap:"rapidite" };
+/* Propriétés CALCULÉES : le filtre lit la fonction, pas la clé du fichier. */
+const FILTER_GET = { reco:recoModel };
 const FILTER_OPS = [["is","est"],["not","n'est pas"],["empty","est vide"]];
 const opLabel = o => (FILTER_OPS.find(x=>x[0]===o)||FILTER_OPS[0])[1];
 const SORT_OPTS = [["prio","Priorité"],["recent","Plus récent"],["dom","Catégorie"]];
@@ -2958,7 +3033,7 @@ function currentFilter(){
            sort:sortKey, group:$("#qGroup").value };
 }
 function filterMatch(f, e){
-  const val = e[FILTER_FIELD[f.key]] || "";
+  const val = FILTER_GET[f.key] ? FILTER_GET[f.key](e) : (e[FILTER_FIELD[f.key]] || "");
   if(f.op==="empty") return !val;
   if(!f.values.length) return true;          // filtre incomplet (aucune valeur cochée) = ne filtre pas encore
   const has = f.values.indexOf(val) >= 0;    // OU intra-propriété
@@ -2989,6 +3064,9 @@ function filterValueList(key){
   if(key==="lot") return state.lots.map(l=>({v:l.id,label:l.name}));
   if(key==="coder") return allCoderValues().map(v=>({v,label:coderLabel(v)}));
   if(key==="model") return allModelValues().map(v=>({v,label:v}));
+  if(key==="diff") return DIFF_ORDER.map(v=>({v,label:v}));
+  if(key==="rap") return RAP_ORDER.map(v=>({v,label:v}));
+  if(key==="reco") return [...new Set([...Object.values(RECO_MODELES), ...state.entries.map(recoModel)].filter(Boolean))].map(v=>({v,label:v}));
   return [];
 }
 function filterValueLabel(key,val){
@@ -3181,6 +3259,7 @@ function render(){
   renderFilterChips();
   updateStatPill();
   updateNavCounts();
+  renderProgress();
 }
 
 /* PS-041 : compteurs discrets sur les onglets nav — totaux NON filtrés, mis à jour à chaque render */
@@ -3280,6 +3359,12 @@ const TABLE_COLS = [
     cell:e=>{ const td=el("td"); td.innerHTML = e.model ? esc(e.model) : '<span class="cam">—</span>'; return td; } },
   { key:"prio",  label:"Prio",      get:e=>prioRank(e.prio),
     cell:e=>{ const td=el("td"); td.innerHTML=`<span class="badge prio ${e.prio}">${e.prio}</span>`; return td; } },
+  { key:"reco",  label:"Conseillé", get:e=>recoModel(e).toLowerCase(),
+    cell:e=>{ const td=el("td"); td.innerHTML = recoModel(e) ? esc(recoModel(e)) : '<span class="cam">—</span>'; return td; } },
+  { key:"rap",   label:"Rapidité", get:e=>rapRank(e),
+    cell:e=>{ const td=el("td"); td.innerHTML = rapBadgeHtml(e) || '<span class="cam">—</span>'; return td; } },
+  { key:"diff",  label:"Difficulté", get:e=>diffRank(e),
+    cell:e=>{ const td=el("td"); td.innerHTML = diffBadgeHtml(e) || '<span class="cam">—</span>'; return td; } },
   { key:"stat",  label:"Statut",    get:e=>STATS.indexOf(e.stat),
     cell:e=>{ const td=el("td"); td.appendChild(statusSelect(e)); return td; } },
   // PS-044 : badge #n cliquable, couleur open/merged/closed (comme la liste des lots).
@@ -3404,7 +3489,7 @@ function esc(s){ return (s||"").replace(/[&<>]/g, m=>({'&':'&amp;','<':'&lt;','>
 const LOT_STAGES = ["Planifié","En cours","En PR",S_MERGED,S_DONE];
 const LOT_STAGE_COLOR = { "Planifié":"var(--st-todo)", "En cours":"var(--st-doing)", "En PR":"var(--st-pr)",
                           [S_MERGED]:"var(--p1)", [S_DONE]:"var(--st-done)", [STAT_ABANDON]:"var(--st-aband)" };
-/* Difficulté estimée du lot (indicative — ajustable). Ordre = tri croissant. */
+/* Difficulté estimée — d'un lot (indicative) et, depuis ATL-173, de chaque ticket. Ordre = tri croissant. */
 const DIFF_ORDER = ["Facile","Moyen","Difficile"];
 const DIFF_META = {
   "Facile":    { c:"#2e9e5b", bg:"rgba(46,158,91,.14)",  b:"rgba(46,158,91,.42)" },
@@ -3412,6 +3497,146 @@ const DIFF_META = {
   "Difficile": { c:"#d1603d", bg:"rgba(209,96,61,.15)",  b:"rgba(209,96,61,.45)" }
 };
 function diffRank(l){ const i=DIFF_ORDER.indexOf(l&&l.difficulty||""); return i<0?99:i; }
+/* ATL-174 — la RAPIDITÉ estimée d'un ticket (Rapide, Normal, Long), à côté de la difficulté : un
+   ticket difficile peut être court, un ticket facile long. Les seuils en jetons d'entrée sont
+   ÉTALONNÉS sur le coût réel — tools/cout-reel.js tickets les confronte au mesuré — et dits dans
+   SOCLE.md : Rapide < 6 M, Normal de 6 à 15 M, Long > 15 M (terciles de 126 tickets, 02/10/2026). */
+const RAP_ORDER = ["Rapide","Normal","Long"];
+const RAP_META = {
+  "Rapide": { c:"#2e9e5b", bg:"rgba(46,158,91,.14)",  b:"rgba(46,158,91,.42)" },
+  "Normal": { c:"#c98a00", bg:"rgba(201,138,0,.15)",  b:"rgba(201,138,0,.45)" },
+  "Long":   { c:"#d1603d", bg:"rgba(209,96,61,.15)",  b:"rgba(209,96,61,.45)" }
+};
+function rapRank(e){ const i=RAP_ORDER.indexOf(e&&e.rapidite||""); return i<0?99:i; }
+function rapBadgeHtml(e){
+  const m = e && RAP_META[e.rapidite]; if(!m) return "";
+  return `<span class="ldiff" style="color:${m.c};background:${m.bg};border-color:${m.b}" title="Rapidité estimée">${esc(e.rapidite)}</span>`;
+}
+/* ATL-175 — le modèle CONSEILLÉ se calcule, il ne se saisit pas (décision du lot L-suivi-evalue,
+   02/10/2026) : une fonction pure de la difficulté du ticket, donc rien de plus à maintenir ni à
+   laisser dériver. `modelReco` (facultatif) corrige à la main UN ticket. Sans difficulté, rien :
+   jamais deviné. À ne pas confondre avec `model`, le modèle qui A codé. La MÊME table vit dans
+   generate-suivi.ps1 (RECO_MODELES) : page et suivi.md doivent rendre le même conseil. */
+const RECO_MODELES = { "Facile":"Haiku 4.5", "Moyen":"Sonnet 5.5", "Difficile":"Opus 5.5" };
+function recoModel(e){
+  if(!e) return "";
+  if(typeof e.modelReco==="string" && e.modelReco.trim()) return e.modelReco.trim();
+  return RECO_MODELES[e.difficulty] || "";
+}
+/* ATL-177 — l'AVANCEMENT du projet, pondéré par la difficulté, découpé par lot. Décision du lot
+   L-suivi-evalue (02/10/2026) : périmètre VIVANT — le pourcentage compte tout ce qui existe
+   aujourd'hui, donc il peut reculer quand on ajoute des tickets ; rien n'est saisi, tout se déduit
+   de stat, lot et difficulty. Poids Facile 1, Moyen 2, Difficile 3 ; un ticket sans difficulté pèse
+   2 (Moyen) et la page le dit. Hors du compte : les tickets de classe `hors` (Parké, Abandonné).
+   MÊME calcul dans generate-suivi.ps1 (Get-Avancement) : page et suivi-actif.md donnent le même
+   pourcentage, arrondi à l'entier. Les statuts se lisent par leur classe, comme le générateur. */
+const POIDS_DIFF = { "Facile":1, "Moyen":2, "Difficile":3 };
+const POIDS_DEFAUT = 2;
+const CLASSE_ENTREE_TOL = Object.assign({}, CLASSE_ENTREE_REF, { "En ligne":"clos", "En pause":"hors" });
+function classeEntree(e){
+  const d = (state && state.socle && state.socle.statutsEntree) || null;
+  return (d && d[e.stat]) || CLASSE_ENTREE_TOL[e.stat] || "";
+}
+function poidsTicket(e){ return POIDS_DIFF[e && e.difficulty] || POIDS_DEFAUT; }
+function avancement(){
+  const mk = (id,name,l) => ({ id, name, l, w:0, done:0, pr:0, doing:0, sans:0, n:0, tr:false });
+  const byLot = new Map(), order = [];
+  state.lots.forEach(l=>{ byLot.set(l.id, mk(l.id, l.name, l)); order.push(l.id); });
+  const sansLot = mk("", "Sans lot", null);
+  const tot = mk("", "Projet", null);
+  state.entries.forEach(e=>{
+    const cl = classeEntree(e);
+    if(cl==="hors") return;
+    const w = poidsTicket(e), s = (e.lot && byLot.get(e.lot)) || sansLot;
+    const sans = POIDS_DIFF[e.difficulty] ? 0 : 1;
+    if(cl==="en-travail") s.tr = true;
+    [s, tot].forEach(a=>{
+      a.w += w; a.n++; a.sans += sans;
+      if(cl==="clos") a.done += w;
+      else if(cl==="en-travail"){ if(e.stat==="En PR") a.pr += w; else a.doing += w; }
+    });
+  });
+  const lots = order.map(id=>byLot.get(id)).filter(a=>a.w);
+  if(sansLot.w) lots.push(sansLot);
+  /* « au travail » : même définition que le sommaire de generate-suivi.ps1 — lot en classe en-travail,
+     OU un de ses tickets l'est, OU il porte une reprise. « Ouvert » : il reste du travail, ou le lot
+     n'est pas clos (et pas archivé) ; sinon il est « livré » et se replie dans la barre. */
+  lots.forEach(a=>{
+    const l = a.l;
+    a.travail = a.tr || !!(l && (l.reprise || classeLot(l.status)==="en-travail"));
+    a.ouvert = a.done < a.w || !!(l && !l.archived && classeLot(l.status)!=="clos");
+  });
+  return { total:tot, lots };
+}
+function pctAvancement(a){ return a.w ? Math.floor(100*a.done/a.w + .5) : 0; }
+let progDepliee = false;
+try { progDepliee = localStorage.getItem(NS("progFold"))==="1"; } catch(e){}
+function progSomme(xs){ return xs.reduce((s,a)=>({ w:s.w+a.w, done:s.done+a.done, pr:s.pr+a.pr, doing:s.doing+a.doing }), { w:0, done:0, pr:0, doing:0 }); }
+/* Couches d'un segment, de gauche à droite : fait, en PR, en cours ; le reste du segment est vide (à faire). */
+function progPart(a){ return [["ps-done",a.done],["ps-pr",a.pr],["ps-doing",a.doing]].filter(x=>x[1]).reduce((r,x)=>{
+  const w = 100*x[1]/a.w; r.h += `<i class="${x[0]}" style="left:${r.x.toFixed(2)}%;width:${w.toFixed(2)}%"></i>`; r.x += w; return r; }, { h:"", x:0 }).h; }
+/* Le numéro d'un lot est son « # » (`order`) — celui des listes, du Planning et de la fiche —, jamais
+   son rang dans la barre : sinon le 2 de la barre n'est pas le lot 2 des listes. Un lot sans ordre,
+   et les tickets sans lot, n'en portent pas. */
+function progNum(a){ return a.l && a.l.order ? String(a.l.order) : ""; }
+function progDetail(a){
+  /* Une ligne par fait : la première est le titre de l'infobulle, les suivantes son détail (initTooltips). */
+  return [ (progNum(a) ? `Lot ${progNum(a)} · ` : "") + a.name,
+           a.id ? `ID : ${a.id}` : "",
+           `${pctAvancement(a)} % fait · ${a.done}/${a.w} points`,
+           `${a.n} ticket${a.n>1?"s":""} · ` + (a.ouvert ? (a.travail ? "au travail" : "en attente") : "livré"),
+           a.id ? "Clic : déplier dans la liste (re-clic : replier)" : "", a.id ? "Ctrl+clic : ouvrir la fiche" : "" ].filter(Boolean).join("\n");
+}
+function wireProgress(box){
+  if(box._wired) return; box._wired = true;
+  box.addEventListener("click", ev=>{
+    if(ev.target.closest(".prog-fold")){
+      progDepliee = !progDepliee;
+      try { localStorage.setItem(NS("progFold"), progDepliee?"1":"0"); } catch(e){}
+      renderProgress(); return;
+    }
+    const t = ev.target.closest("[data-lot]");
+    if(!t || !t.dataset.lot) return;
+    /* Ctrl/Cmd+clic : la fiche du lot. Clic simple : on montre le lot DANS la liste des lots, déplié. */
+    if(ev.ctrlKey || ev.metaKey) openLotDetail(t.dataset.lot); else montrerLotDansListe(t.dataset.lot);
+  });
+}
+/* Clic sur un segment : bascule sur la liste des lots, déplie le lot (ses tickets), le fait défiler à
+   l'écran et le signale d'un halo. Si la liste ne le montre pas (lot archivé, ou filtre actif qui
+   l'écarte) il n'y a rien à déplier : on ouvre sa fiche plutôt que de ne rien faire. */
+function montrerLotDansListe(id){
+  /* Bascule : un second clic REPLIE le lot, mais seulement si on le regarde déjà dans la liste des lots.
+     Déplié alors qu'on est sur un autre onglet (Tickets…), le clic ne replie pas — il y a un lot à
+     retrouver, pas à refermer : on le laisse déplié, on passe sur la liste et le halo le désigne. */
+  if(view==="lotlist" && lotListExpanded.has(id)){ lotListExpanded.delete(id); render(); return; }
+  if(view!=="lotlist") setView("lotlist");
+  lotListExpanded.add(id); render();
+  const tr = [...document.querySelectorAll("tr[data-lotrow]")].find(x=>x.dataset.lotrow===id);
+  if(!tr){ lotListExpanded.delete(id); openLotDetail(id); return; }
+  tr.scrollIntoView({ block:"center", behavior:"smooth" });
+  tr.classList.remove("flash"); void tr.offsetWidth; tr.classList.add("flash");
+}
+function renderProgress(){
+  const box=$("#progress"); if(!box) return;
+  const av=avancement(), t=av.total;
+  if(!t.w){ box.classList.add("hidden"); box.innerHTML=""; return; }
+  box.classList.remove("hidden"); wireProgress(box);
+  const parNum = (a,b)=>((a.l&&a.l.order)||999)-((b.l&&b.l.order)||999);
+  const ouv = av.lots.filter(a=>a.ouvert).sort(parNum), liv = av.lots.filter(a=>!a.ouvert).sort(parNum);
+  const sl = progSomme(liv);
+  const bits=[`${t.done} point${t.done>1?"s":""} faits sur ${t.w}`];
+  if(t.pr) bits.push(`${t.pr} en PR`);
+  if(t.doing) bits.push(`${t.doing} en cours`);
+  const bilan = `Avancement du projet : ${pctAvancement(t)} %\n${bits.join(" · ")}\nPoids : Facile 1, Moyen 2, Difficile 3\nParké et Abandonné hors compte`;
+  const warn = t.sans ? `<span class="prog-warn" title="${esc(`${t.sans} ticket${t.sans>1?"s":""} sans difficulté\nIl pèse ${POIDS_DEFAUT}, comme Moyen\nRenseigner sa difficulté affine le pourcentage`)}">${t.sans} sans difficulté</span>` : "";
+  const fold = liv.length ? `<button class="prog-fold" type="button" title="${esc(`${liv.length} lot${liv.length>1?"s":""} livré${liv.length>1?"s":""}\n${sl.w} point${sl.w>1?"s":""}\nClic : ${progDepliee?"replier":"déplier"}`)}">${progDepliee?"▾":"▸"} ${liv.length} lot${liv.length>1?"s":""} livré${liv.length>1?"s":""}</button>` : "";
+  const bar = ouv.length
+    ? `<div class="prog-bar">${ouv.map(a=>`<div class="prog-seg${a.travail?" tr":""}" data-lot="${esc(a.id)}" style="flex:${a.w} 1 0" title="${esc(progDetail(a))}">${progPart(a)}<span>${esc(progNum(a)||"·")}</span></div>`).join("")}</div>`
+    : `<div class="prog-bar" style="color:var(--muted);font-size:12px">Tous les lots sont livrés.</div>`;
+  let h = `<div class="prog-row"><span class="prog-pct" title="${esc(bilan)}">${pctAvancement(t)} %</span>${fold}${bar}${warn}</div>`;
+  if(liv.length && progDepliee) h += `<div class="prog-livrow">${liv.map(a=>`<div class="prog-livseg" data-lot="${esc(a.id)}" style="flex:${a.w} 1 0" title="${esc(progDetail(a))}"></div>`).join("")}</div>`;
+  box.innerHTML = h;
+}
 function diffBadgeHtml(l){
   const m = l && DIFF_META[l.difficulty]; if(!m) return "";
   return `<span class="ldiff" style="color:${m.c};background:${m.bg};border-color:${m.b}" title="Difficulté estimée">${esc(l.difficulty)}</span>`;
@@ -3457,7 +3682,7 @@ function lotCoders(l){
 function lotPrompt(l){
   const ids=lotEntries(l).map(idStr).join(", ");
   const where = PROJECT.worktrees ? " dans un worktree" : "";
-  return `Regarde le suivi. Démarre le lot « ${l.name} »${ids?` (${ids})`:""}${where}. Au terme du code, renseigne codedWith sur chaque ticket avec l’IA réellement utilisée (${PROJECT.coders.join(", ")} ou le nom exact d’une autre IA) ; aucun ticket ne doit passer à Fait sans cette attribution. Renseigne aussi model avec le modèle utilisé (ex. ${MODELS[0]}), « Mixte » s’il y en a eu plusieurs — facultatif si tu ne le connais pas.`;
+  return `Regarde le suivi. Démarre le lot « ${l.name} »${ids?` (${ids})`:""}${where}. Au terme du code, renseigne codedWith sur chaque ticket avec l’IA réellement utilisée (${PROJECT.coders.join(", ")} ou le nom exact d’une autre IA) ; aucun ticket ne doit passer à Fait sans cette attribution. Renseigne aussi model avec le modèle utilisé (ex. ${MODELS[0]}), « Mixte » s’il y en a eu plusieurs, et difficulty (${DIFF_ORDER.join(", ")}) : aucun ticket ne doit passer à Fait sans ces trois champs.`;
 }
 function copyText(t){
   if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
@@ -3743,7 +3968,7 @@ function renderLotList(c){
   lots.forEach(l=>{
     const stage=lotStage(l);
     const ents=lotEntries(l);
-    const tr=el("tr","lotrow"+(stage===S_DONE?" done":""));
+    const tr=el("tr","lotrow"+(stage===S_DONE?" done":"")); tr.dataset.lotrow=l.id;   // cible du clic sur la barre d'avancement
     const open=lotListExpanded.has(l.id);
     /* Cellule par clé de colonne (l'ordre de rendu suit `vis`). */
     const lotCell=col=>{
@@ -4019,6 +4244,10 @@ function adoptState(d){
     else e.codedWith=e.codedWith.trim();
     // ATL-161 — `model` n'existe que rempli : ni clé vide ajoutée, ni valeur autre qu'une chaîne gardée.
     if(typeof e.model==="string" && e.model.trim()) e.model=e.model.trim(); else delete e.model;
+    // ATL-173 — `difficulty` : l'une des trois valeurs de DIFF_ORDER, sinon la clé n'existe pas.
+    if(!DIFF_ORDER.includes(e.difficulty)) delete e.difficulty;
+    if(!RAP_ORDER.includes(e.rapidite)) delete e.rapidite;   // ATL-174
+    if(typeof e.modelReco==="string" && e.modelReco.trim()) e.modelReco=e.modelReco.trim(); else delete e.modelReco;   // ATL-175
   });
   // ATL-090 — une capture écrite en CHAÎNE (forme d'un vieux suivi.json : le data-url seul, sans
   // objet autour) redevient un objet ici. Sans ça elle traversait la page sans être vue : pas de
@@ -4050,6 +4279,8 @@ function rebuildDynamicSelects(){
 }
 function initStaticSelects(){
   fillSelect($("#fPrio"),PRIOS,v=>PRIO_LABEL[v]); fillSelect($("#fStat"),STATS);
+  fillSelect($("#fDiff"),[{value:"",label:"—"},...DIFF_ORDER.map(d=>({value:d,label:d}))],null,true);
+  fillSelect($("#fRap"),[{value:"",label:"—"},...RAP_ORDER.map(d=>({value:d,label:d}))],null,true);
 }
 
 /* ---------- Thème ---------- */
@@ -4060,6 +4291,54 @@ function initTheme(){
     const next=cur==="dark"?"light":"dark";
     document.documentElement.setAttribute("data-theme",next); lsSet(NS("theme"),next);
   };
+}
+
+/* ---------- Infobulles ----------
+   Remplace la bulle native du navigateur (grise, lente, sans mise en forme) par une bulle à la charte
+   de la page. Aucun appelant ne change : tout `title="…"` posé dans le code, y compris par les rendus
+   dynamiques, est capté au survol (ou au focus clavier), déplacé dans `data-tip` pour que la bulle
+   native ne double pas la nôtre, puis affiché. Un élément sans texte visible garde son nom accessible
+   par `aria-label`. */
+function initTooltips(){
+  if(document.getElementById("tip")) return;
+  const tip=document.createElement("div"); tip.id="tip"; tip.setAttribute("role","tooltip"); document.body.appendChild(tip);
+  let cur=null, timer=0;
+  const hide=()=>{ clearTimeout(timer); cur=null; tip.classList.remove("on"); };
+  const taken=el=>{
+    const t=el.getAttribute("title");
+    if(t!==null){
+      el.removeAttribute("title");
+      if(t.trim()){ el.dataset.tip=t; if(!el.textContent.trim() && !el.getAttribute("aria-label")) el.setAttribute("aria-label",t); }
+    }
+    return el.dataset.tip||"";
+  };
+  const place=el=>{
+    /* Hiérarchie : la 1re ligne est le titre, les suivantes le détail. Un texte d'une seule ligne et
+       long se coupe au premier « — » : ce qui précède est le titre, ce qui suit le détail. */
+    let L=el.dataset.tip.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(L.length===1 && L[0].length>40){ const i=L[0].indexOf(" — "); if(i>0) L=[L[0].slice(0,i), L[0].slice(i+3)]; }
+    tip.textContent="";
+    L.forEach((s,i)=>{ const d=document.createElement("div"); d.className=i?(/^(Clic|Ctrl\+clic)\b/.test(s)?"tl tc":"tl"):"th"; d.textContent=s; tip.appendChild(d); });
+    tip.classList.remove("on","below"); tip.style.left="0px"; tip.style.top="0px";
+    const r=el.getBoundingClientRect(), w=tip.offsetWidth, h=tip.offsetHeight, m=8;
+    let x=r.left+r.width/2-w/2; x=Math.max(m,Math.min(x,innerWidth-w-m));
+    let y=r.top-h-9, below=false; if(y<m){ y=r.bottom+9; below=true; }
+    tip.style.left=Math.round(x)+"px"; tip.style.top=Math.round(y)+"px";
+    tip.style.setProperty("--ax",Math.round(Math.max(10,Math.min(r.left+r.width/2-x,w-10)))+"px");
+    tip.classList.toggle("below",below); tip.classList.add("on");
+  };
+  const show=(el,delay)=>{
+    const host=el.closest("[title],[data-tip]"); if(!host||host===cur) return;
+    hide(); if(!taken(host)) return; cur=host;
+    timer=setTimeout(()=>{ if(cur===host && host.isConnected) place(host); }, delay);
+  };
+  document.addEventListener("mouseover",e=>{ if(e.target.closest) show(e.target,350); });
+  document.addEventListener("mouseout",e=>{ if(cur && !cur.contains(e.relatedTarget)) hide(); });
+  document.addEventListener("focusin",e=>{ if(e.target.closest) show(e.target,0); });
+  document.addEventListener("focusout",hide);
+  document.addEventListener("mousedown",hide,true);
+  document.addEventListener("scroll",hide,true);
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") hide(); });
 }
 
 /* ---------- Câblage ---------- */
@@ -4074,23 +4353,32 @@ function wire(){
   $("#tkAbandonBtn").onclick=()=>{ if(navKey==null) return; abandonEntry(navKey); openTicketDetail(navKey,{keep:true}); };
   $("#tkArchBtn").onclick=()=>{ const e=state.entries.find(x=>x.n===navKey); if(!e) return; if(e.archived) unarchiveEntry(e.n); else archiveEntry(e.n); openTicketDetail(navKey,{keep:true}); };
   $("#tkDelBtn").onclick=()=>{ const n=navKey; delEntry(n); if(!state.entries.find(x=>x.n===n)) closeDetail(); };
+  // PS-047 : un clic ne ferme un pop-up que si le bouton a AUSSI été enfoncé dans le vide (sélection de texte relâchée hors cadre = pas une fermeture).
+  let _mdT=null; document.addEventListener("mousedown",e=>{ _mdT=e.target; },true);
   $("#tkCloseBtn").onclick=closeDetail;
   $("#tkBack").onclick=goBackDetail;
-  // PS-046 : en mode ÉDITION (Nouvelle entrée ou Modifier), un clic hors du pop-up ne ferme plus
-  // (perte de saisie par clic involontaire). Fermer = Annuler, ✕ ou Échap. En lecture : comportement inchangé.
-  $("#ticketModal").addEventListener("click",e=>{ if(e.target.id==="ticketModal" && !$("#ticketBox").classList.contains("editing")) closeDetail(); });
+  // Un clic hors cadre ferme la fiche ticket ou lot EN LECTURE seulement. Nouvelle entrée et Modifier
+  // (classe `editing`) ne se ferment jamais ainsi : une saisie perdue par un clic involontaire (PS-046).
+  // Fermer = Annuler, ✕ ou Échap. Le garde `_mdT` (PS-047) exige que le bouton ait aussi été enfoncé
+  // dans le vide : relâcher une sélection de texte hors du cadre n'est pas une fermeture.
+  [["#ticketModal","#ticketBox"],["#lotModal","#lotBox"]].forEach(([m,b])=>{
+    $(m).addEventListener("click",ev=>{
+      if(ev.target!==$(m) || _mdT!==ev.target || $(b).classList.contains("editing")) return;
+      closeDetail();
+    });
+  });
+  initTooltips();
 
   /* --- Pop-up lot --- */
   $("#lotEditBtn").onclick=lotEnterEdit;
   $("#lotCancelBtn").onclick=lotCancel;
   $("#lotSaveBtn").onclick=lotSave;
-  $("#lotDupBtn").onclick=()=>{ const l=state.lots.find(x=>x.id===navKey); if(!l) return; const clone=JSON.parse(JSON.stringify(l)); clone.name=(l.name||"lot")+" (copie)"; clone.id=lotIdFromName(clone.name); delete clone.pr; delete clone.prState; delete clone.prUrl; delete clone.merged; delete clone.builtSw; delete clone.archived; state.lots.push(clone); rebuildDynamicSelects(); render(); scheduleSave(); openLotDetail(clone.id); };
+  $("#lotDupBtn").onclick=()=>{ const l=state.lots.find(x=>x.id===navKey); if(!l) return; const clone=JSON.parse(JSON.stringify(l)); clone.name=(l.name||"lot")+" (copie)"; clone.id=lotIdFromName(clone.name); clone.order=nextLotOrder(); delete clone.pr; delete clone.prState; delete clone.prUrl; delete clone.merged; delete clone.builtSw; delete clone.archived; state.lots.push(clone); rebuildDynamicSelects(); render(); scheduleSave(); openLotDetail(clone.id); };
   $("#lotAbandonBtn").onclick=()=>{ if(!navKey) return; abandonLot(navKey); openLotDetail(navKey,{keep:true}); };
   $("#lotArchBtn").onclick=()=>{ const l=state.lots.find(x=>x.id===navKey); if(!l) return; if(l.archived) unarchiveLot(l.id); else archiveLot(l.id); openLotDetail(navKey,{keep:true}); };
   $("#lotDelBtn").onclick=()=>{ const i=state.lots.findIndex(x=>x.id===navKey); if(i<0) return; deleteLot(i); closeDetail(); };   // ATL-080 — plus de confirm : le geste range à la corbeille, il est réversible
   $("#lotCloseBtn").onclick=closeDetail;
   $("#lotBack").onclick=goBackDetail;
-  $("#lotModal").addEventListener("click",e=>{ if(e.target.id==="lotModal" && !$("#lotBox").classList.contains("editing")) closeDetail(); });   // PS-046 (même protection côté lot)
 
   /* --- Échap + raccourci N --- */
   document.addEventListener("keydown",e=>{
@@ -4108,7 +4396,7 @@ function wire(){
   });
   $("#statPill").onclick=()=>openStats();
   $("#statsClose").onclick=()=>$("#statsModal").classList.remove("show");
-  $("#statsModal").addEventListener("click",e=>{ if(e.target.id==="statsModal") $("#statsModal").classList.remove("show"); });
+  $("#statsModal").addEventListener("click",e=>{ if(e.target.id==="statsModal" && _mdT===e.target) $("#statsModal").classList.remove("show"); });
   $("#connectBtn").onclick=()=> (dirHandle && !dirReady) ? reconnectStored() : connectDir();
   $("#reloadBtn").onclick=async ()=>{
     if(!dirHandle){ toast("Connecte d'abord le dossier .claude."); return; }
@@ -4124,18 +4412,18 @@ function wire(){
   $("#conflictCancel").onclick=()=>{ $("#conflictModal").classList.remove("show"); conflictCtx=null; };
   $("#conflictKeepLocal").onclick=conflictKeepLocal;
   $("#conflictLoadDisk").onclick=conflictLoadDisk;
-  $("#conflictModal").addEventListener("click",e=>{ if(e.target.id==="conflictModal"){ $("#conflictModal").classList.remove("show"); conflictCtx=null; } });
+  $("#conflictModal").addEventListener("click",e=>{ if(e.target.id==="conflictModal" && _mdT===e.target){ $("#conflictModal").classList.remove("show"); conflictCtx=null; } });
   $("#archLotCancel").onclick=closeArchiveLotModal;
   $("#archLotConfirm").onclick=confirmArchiveLot;
-  $("#archiveLotModal").addEventListener("click",e=>{ if(e.target.id==="archiveLotModal") closeArchiveLotModal(); });
+  $("#archiveLotModal").addEventListener("click",e=>{ if(e.target.id==="archiveLotModal" && _mdT===e.target) closeArchiveLotModal(); });
   $("#unarchLotCancel").onclick=closeUnarchiveLotModal;
   $("#unarchLotConfirm").onclick=confirmUnarchiveLot;
   $("#unarchLotModeAll").onchange=()=>{ $("#unarchLotPickList").style.display="none"; };
   $("#unarchLotModePick").onchange=()=>{ $("#unarchLotPickList").style.display=""; };
-  $("#unarchiveLotModal").addEventListener("click",e=>{ if(e.target.id==="unarchiveLotModal") closeUnarchiveLotModal(); });
+  $("#unarchiveLotModal").addEventListener("click",e=>{ if(e.target.id==="unarchiveLotModal" && _mdT===e.target) closeUnarchiveLotModal(); });
   $("#archEntryLotCancel").onclick=closeArchiveEntryLotModal;
   $("#archEntryLotConfirm").onclick=confirmArchiveEntryLot;
-  $("#archiveEntryLotModal").addEventListener("click",e=>{ if(e.target.id==="archiveEntryLotModal") closeArchiveEntryLotModal(); });
+  $("#archiveEntryLotModal").addEventListener("click",e=>{ if(e.target.id==="archiveEntryLotModal" && _mdT===e.target) closeArchiveEntryLotModal(); });
   ["qSearch","qGroup"].forEach(id=>$("#"+id).addEventListener("input",render));
   $("#qGroup").addEventListener("change", syncFilters);
 
@@ -4195,12 +4483,12 @@ function wire(){
   $("#lotAdd").onclick=()=>addLot();
   $("#lotNew").addEventListener("keydown",e=>{ if(e.key==="Enter") addLot(); });
   $("#manageClose").onclick=closeManage;                                                                    // ATL-051
-  $("#manageModal").addEventListener("click",e=>{ if(e.target.id==="manageModal") closeManage(); });         // ATL-051
+  $("#manageModal").addEventListener("click",e=>{ if(e.target.id==="manageModal" && _mdT===e.target) closeManage(); });         // ATL-051
 
   // Aide
   $("#helpBtn").onclick=()=>$("#helpModal").classList.add("show");
   $("#helpClose").onclick=()=>$("#helpModal").classList.remove("show");
-  $("#helpModal").addEventListener("click",e=>{ if(e.target.id==="helpModal") $("#helpModal").classList.remove("show"); });
+  $("#helpModal").addEventListener("click",e=>{ if(e.target.id==="helpModal" && _mdT===e.target) $("#helpModal").classList.remove("show"); });
 
   // Captures
   const drop=$("#drop"), fi=$("#fileInput");
@@ -4235,7 +4523,13 @@ function wire(){
 }
 
 /* ---------- Identité du projet : applique PROJECT à l’interface ---------- */
+function applyGithubLink(){
+  const url=PROJECT.github||"";
+  if(!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/.test(url)) return;
+  const link=$("#githubLink"); link.href=url; link.classList.remove("hidden");
+}
 function applyBranding(){
+  applyGithubLink();
   document.documentElement.style.setProperty("--accent", PROJECT.accent);
   document.title = PROJECT.name + " — Suivi projet";
   const initial = (PROJECT.name || "?").trim().charAt(0).toUpperCase();

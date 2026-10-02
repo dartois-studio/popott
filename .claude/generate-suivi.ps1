@@ -146,6 +146,46 @@ function ModelLabel($o) {
   if ($o.PSObject.Properties['model'] -and $o.model) { return [string]$o.model }
   return ''
 }
+# ATL-173 — la difficulté du ticket (Facile, Moyen, Difficile) ; facultative, '' si absente.
+function DiffLabel($o) {
+  if ($o.PSObject.Properties['difficulty'] -and $o.difficulty) { return [string]$o.difficulty }
+  return ''
+}
+# ATL-175 — le modèle CONSEILLÉ, calculé d'après la difficulté du ticket. MÊME table que RECO_MODELES
+# dans suivi-projet.template.html : page et suivi.md rendent le même conseil. `modelReco` corrige à
+# la main ; sans difficulté (ni correction), '' — jamais deviné.
+$RECO_MODELES = @{ 'Facile' = 'Haiku 4.5'; 'Moyen' = 'Sonnet 5.5'; 'Difficile' = 'Opus 5.5' }
+function RecoLabel($o) {
+  if ($o.PSObject.Properties['modelReco'] -and ([string]$o.modelReco).Trim()) { return ([string]$o.modelReco).Trim() }
+  $d = DiffLabel $o
+  if ($d -and $RECO_MODELES.ContainsKey($d)) { return $RECO_MODELES[$d] }
+  return ''
+}
+# ATL-174 — la rapidité estimée du ticket (Rapide, Normal, Long) ; facultative, '' si absente.
+function RapLabel($o) {
+  if ($o.PSObject.Properties['rapidite'] -and $o.rapidite) { return [string]$o.rapidite }
+  return ''
+}
+# ATL-177 — l'AVANCEMENT du projet : poids des tickets Fait ÷ poids des tickets hors Parké/Abandonné,
+# Facile 1, Moyen 2, Difficile 3, sans difficulté 2. MÊME calcul que avancement() dans
+# suivi-projet.template.html (périmètre VIVANT, décision du lot L-suivi-evalue, 02/10/2026) : page et
+# suivi-actif.md donnent le même pourcentage, arrondi à l'entier (demi vers le haut, comme Math.round —
+# [Math]::Round arrondirait au pair). Rien n'est saisi : tout se déduit de stat, lot et difficulty.
+$POIDS_DIFF = @{ 'Facile' = 1; 'Moyen' = 2; 'Difficile' = 3 }
+function Get-Avancement($entries, [string]$lotId = $null) {
+  $w = 0; $done = 0; $sans = 0
+  foreach ($e in $entries) {
+    if ($lotId -and [string]$e.lot -ne $lotId) { continue }
+    $cl = ClasseEntree $e
+    if ($cl -eq 'hors') { continue }
+    $d = DiffLabel $e
+    $p = if ($d -and $POIDS_DIFF.ContainsKey($d)) { $POIDS_DIFF[$d] } else { $sans++; 2 }
+    $w += $p
+    if ($cl -eq 'clos') { $done += $p }
+  }
+  $pct = if ($w) { [int][Math]::Floor(100 * $done / $w + 0.5) } else { 0 }
+  return @{ W = $w; Done = $done; Sans = $sans; Pct = $pct }
+}
 # Libellé PR compact : "PR #285 (mergée le 2026-07-09)" / "(ouverte)" / "(fermée sans merge)" — '' si pas de PR
 function PrLabel($o) {
   if (-not $o.pr) { return '' }
@@ -235,9 +275,11 @@ function LotRel([string]$id) { return ('.claude/lots/' + (LotFile $id)) }
 # Signature d'une page de lot, dans sa ligne d'en-tête : c'est elle, et elle seule, qui autorise
 # le générateur à supprimer un fichier de .claude\lots\ — jamais un fichier posé là à la main.
 $LOT_MARK = 'page de lot dérivée de `suivi.json`'
-function TicketLine($e) {
+function TicketLine($e, [bool]$withDiff = $false) {
   $lotTag = if ($e.lot) { ' · ' + [string]$e.lot } else { '' }
-  return ('- ' + (IdStr $e) + ' · ' + $e.prio + ' · ' + [string]$e.stat + $lotTag + ' — ' + $e.title)
+  $diffTag = ''
+  if ($withDiff) { $d = DiffLabel $e; if ($d) { $diffTag = ' · ' + $d; $r = RecoLabel $e; if ($r) { $diffTag += ' (conseillé : ' + $r + ')' } }; $ra = RapLabel $e; if ($ra) { $diffTag += ' · ' + $ra } }   # page de lot seulement : le sommaire a un plafond d'octets
+  return ('- ' + (IdStr $e) + ' · ' + $e.prio + ' · ' + [string]$e.stat + $lotTag + $diffTag + ' — ' + $e.title)
 }
 function DecisionLine($dec, [bool]$mark) {
   $m = if ($mark) { '**à lire d''abord** · ' } else { '' }
@@ -271,6 +313,13 @@ function Write-SuiviActif([string]$Path, $open, $parked, $live) {
     if ($cur[0].branch) { $curBranch = [string]$cur[0].branch }
   }
   $a.Add('**Résumé** — ' + $open.Count + ' ouverts · ' + $live.Count + ' lots non clos · en cours : ' + $curId + ' · branche : ' + $curBranch)
+  # ATL-177 — une ligne à part : la ligne « Résumé » est relue à l'octet près par tools/depots.ps1.
+  $av = Get-Avancement $entries
+  if ($av.W) {
+    $s = '**Avancement** — ' + $av.Pct + ' % (' + $av.Done + ' points faits sur ' + $av.W + ', pondéré par la difficulté'
+    if ($av.Sans) { $s += ' ; ' + $av.Sans + ' ticket(s) sans difficulté, comptés Moyen' }
+    $a.Add($s + ')')
+  }
   $a.Add('')
 
   # ---- Reprise : la première phrase de l'arrêt, et la page où lire le reste (ATL-004) ----
@@ -376,6 +425,8 @@ function Write-LotPage([string]$Path, $l, $open, $parked) {
   $pl = PrLabel $l; if ($pl) { $meta += $pl }
   if ($l.builtSw) { $meta += "$Participle le $($l.builtSw)" }
   $meta += '{0} ticket(s) ouvert(s)' -f $lotOpen.Count
+  $avLot = Get-Avancement $entries $id
+  if ($avLot.W) { $meta += ('{0} % fait ({1}/{2} points)' -f $avLot.Pct, $avLot.Done, $avLot.W) }   # ATL-177
   $p.Add('_' + ($meta -join ' · ') + '_'); $p.Add('')
 
   # La reprise ENTIÈRE : c'est ce que la séance vient chercher (ATL-004), rien n'en est coupé.
@@ -391,11 +442,24 @@ function Write-LotPage([string]$Path, $l, $open, $parked) {
 
   $p.Add('## Tickets ouverts (' + $lotOpen.Count + ')'); $p.Add('')
   if (-not $lotOpen.Count) { $p.Add('_Aucun._') }
-  foreach ($e in $lotOpen) { $p.Add((TicketLine $e)) }
+  # ATL-167 — la description ENTIÈRE sous chaque ticket ouvert : c'est là que vivent les critères, et
+  # la séance applique « lire la page du lot, rien d'autre » (mesuré le 28/09/2026, Object Atlas :
+  # un critère oublié trois fois). Pas de passage « Critères » seul : 2 tickets ouverts sur 72
+  # en ont un. Les lignes sont INDENTÉES : depots.ps1 ne lit que les lignes qui commencent par « - »
+  # sous « Tickets ouverts », et une description contient couramment des puces.
+  foreach ($e in $lotOpen) {
+    $p.Add((TicketLine $e $true))
+    $desc = ([string]$e.desc).Trim()
+    if ($desc) {
+      $p.Add('')
+      foreach ($dl in ($desc -split '\r?\n')) { $p.Add($(if ($dl.Trim()) { '  ' + $dl.TrimEnd() } else { '' })) }
+      $p.Add('')
+    }
+  }
   $p.Add('')
   if ($lotPark.Count) {
     $p.Add('## Hors de l''actionnable (' + $lotPark.Count + ')'); $p.Add('')
-    foreach ($e in $lotPark) { $p.Add((TicketLine $e)) }
+    foreach ($e in $lotPark) { $p.Add((TicketLine $e $true)) }
     $p.Add('')
   }
   if ($lotDone.Count) {
@@ -504,6 +568,9 @@ foreach ($g in $groups) {
     $line = "- $(IdStr $e) · $($e.prio) · **$($e.stat)** · _$($e.type)_ — $($e.title)"
     $coder = CoderLabel $e; if ($coder) { $line += " · Codé avec **$coder**" }
     $model = ModelLabel $e; if ($model) { $line += " · Modèle **$model**" }
+    $dif = DiffLabel $e; if ($dif) { $line += " · Difficulté **$dif**" }
+    $rec = RecoLabel $e; if ($rec) { $line += " · Conseillé **$rec**" }
+    $rap = RapLabel $e; if ($rap) { $line += " · Rapidité **$rap**" }
     $pl = PrLabel $e; if ($pl) { $line += " · $pl" }
     $out.Add($line)
   }
@@ -530,6 +597,9 @@ foreach ($s in $STATS) {
     if ($e.updated -and $e.updated -ne $e.created) { $sub += " · maj $($e.updated)" }
     $coder = CoderLabel $e; if ($coder) { $sub += " · Codé avec $coder" }
     $model = ModelLabel $e; if ($model) { $sub += " · Modèle $model" }
+    $dif = DiffLabel $e; if ($dif) { $sub += " · Difficulté $dif" }
+    $rec = RecoLabel $e; if ($rec) { $sub += " · Conseillé $rec" }
+    $rap = RapLabel $e; if ($rap) { $sub += " · Rapidité $rap" }
     $pl = PrLabel $e; if ($pl) { $sub += " · $pl" }
     if ($e.branch) { $sub += ' · branche `' + $e.branch + '`' }
     if ($e.builtSw) { $sub += " · $Participle le $($e.builtSw)" }
@@ -567,6 +637,18 @@ Write-Host ($msg + ".")
 # sommaire ne grossit qu'avec les lots non clos et les tickets sans lot : c'est à eux de répondre.
 if ($act.Cap -gt 0 -and $act.Size -gt $act.Cap) {
   Write-Warning ("Sommaire au-dessus du plafond : {0} o pour {1}. Rien n'est coupé ; la réponse est de clore des lots, ou de ranger les tickets sans lot dans un lot." -f $act.Size, $act.Cap)
+}
+# ATL-176 — un ticket Fait doit dire l'IA, le modèle ET la difficulté. Le relevé NOMME les trous : un
+# compte seul ne dit pas quoi rattraper. Information, pas avertissement : le passé se rattrape
+# sur demande (cout-reel.js tickets), et un script qui crie en permanence cesse d'être lu.
+$faits = @($entries | Where-Object { (ClasseEntree $_) -eq 'clos' })
+foreach ($champ in @('codedWith', 'model', 'difficulty')) {
+  $sans = @($faits | Where-Object { -not ($_.PSObject.Properties[$champ] -and $_.$champ) })
+  if ($sans.Count) {
+    $ids = (@($sans | Sort-Object { [int]$_.n } -Descending | Select-Object -First 8) | ForEach-Object { IdStr $_ }) -join ', '
+    $reste = if ($sans.Count -gt 8) { ' …' } else { '' }
+    Write-Host ('Faits sans {0} — {1} sur {2} : {3}{4}' -f $champ, $sans.Count, $faits.Count, $ids, $reste)
+  }
 }
 if ($Doublons.Count) {
   Write-Warning ("Numéro de ticket en double (corbeille comprise) : {0}. Deux tickets distincts portent le même identifiant : renuméroter le plus récent au premier numéro libre (node ..\Atelier\tools\ticket.js le donne)." -f ($Doublons -join ', '))

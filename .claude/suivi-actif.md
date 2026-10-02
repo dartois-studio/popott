@@ -1,8 +1,9 @@
 # popott — suivi actif
 
-_Sommaire dérivé de `suivi.json` le 23/09/2026 15:28. **Ne pas éditer** (`.claude\generate-suivi.ps1`). Un lot se travaille sur sa page `.claude/lots/<ID>.md` ; on écrit dans `suivi.json`._
+_Sommaire dérivé de `suivi.json` le 02/10/2026 18:07. **Ne pas éditer** (`.claude\generate-suivi.ps1`). Un lot se travaille sur sa page `.claude/lots/<ID>.md` ; on écrit dans `suivi.json`._
 
 **Résumé** — 5 ouverts · 0 lots non clos · en cours : — · branche : —
+**Avancement** — 38 % (6 points faits sur 16, pondéré par la difficulté ; 8 ticket(s) sans difficulté, comptés Moyen)
 
 ## Lots non clos (0)
 
