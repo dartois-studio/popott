@@ -125,9 +125,13 @@ Le suivi vit dans `.claude` :
 3. Après une écriture de `suivi.json`, régénérer le dérivé :
    `powershell -ExecutionPolicy Bypass -File .claude\generate-suivi.ps1`
 4. Identifiants de tickets : `POP-001`, `POP-002`… (champ `n` dans le JSON).
-5. **`codedWith` est obligatoire avant `Fait`.** Au terme du code, renseigner sur chaque ticket
-   traité l'IA réellement utilisée (`Claude Code`, `ChatGPT`, `Mixte`, ou le nom exact d'une autre).
-   Un ticket ne doit jamais passer à `Fait` sans cette attribution.
+5. **`codedWith`, `model` et `difficulty` sont obligatoires avant `Fait`.** Au terme du code,
+   renseigner sur chaque ticket traité : l'IA réellement utilisée (`codedWith` : `Claude Code`,
+   `ChatGPT`, `Mixte`, ou le nom exact d'une autre), le modèle derrière l'outil (`model` :
+   `Opus 5.5`, `Sonnet 5.5`…, `Mixte` s'il y en a eu plusieurs) et la difficulté réelle du travail
+   (`difficulty` : `Facile`, `Moyen` ou `Difficile`). Un ticket ne doit jamais passer à `Fait` sans
+   les trois. `generate-suivi.ps1` nomme ceux qui en manquent. Un modèle qu'on ne connaît pas se
+   demande ou se mesure (`tools/cout-reel.js tickets`, Atelier) ; on ne l'invente pas.
 6. Statuts : `À faire` → `En cours` → `En PR` → `Fait` (+ `Parké`).
    `En PR` = la PR attend le merge de Guillaume.
 7. Les **lots** (`state.lots`) regroupent les tickets tenant dans **une seule PR cohérente**.
