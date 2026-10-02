@@ -21,8 +21,12 @@
     --radius: 12px;
 
     --p0: #e5484d; --p1: #f5a623; --p2: #3b82f6; --p3: #9aa4af;
-    --st-todo: #8a94a0; --st-doing: var(--accent); --st-pr: #3b82f6; --st-done: #2e9e5b; --st-park: #b28ce0;
-    --st-aband: #a05c4a;
+    /* ATL-185 — statuts, difficultés et rapidités à la palette de la barre d'avancement (Okabe-Ito :
+       bleu #0072B2, orange #E69F00), lisible par un daltonien. Ni vert ni rouge ; la couleur ne porte
+       jamais le sens seule (signe devant le mot : STAT_GLYPH, DIFF_META.g). Teintes assombries en clair,
+       éclaircies en sombre, pour garder un contraste de texte ; redéfinies dans les trois blocs de thème. */
+    --st-todo: #8a94a0; --st-doing: #a86b00; --st-pr: #2c82bb; --st-done: #005f94; --st-park: #6f7f94;
+    --st-aband: #8a6f5c;
     --lot: #7c5cff;
   }
   @media (prefers-color-scheme: dark) {
@@ -32,6 +36,7 @@
       --border: #2b3138; --border-strong: #3a424b;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
       --accent-soft: color-mix(in srgb, var(--accent) 20%, transparent); --lot: #9d84ff;
+      --st-doing: #f0b13a; --st-pr: #8fcbf0; --st-done: #4da6e0; --st-park: #9aa7b8; --st-aband: #b59a86;
     }
   }
   :root[data-theme="dark"] {
@@ -40,6 +45,7 @@
     --border: #2b3138; --border-strong: #3a424b;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
     --accent-soft: color-mix(in srgb, var(--accent) 20%, transparent); --lot: #9d84ff;
+    --st-doing: #f0b13a; --st-pr: #8fcbf0; --st-done: #4da6e0; --st-park: #9aa7b8; --st-aband: #b59a86;
   }
   :root[data-theme="light"] {
     --bg: #f4f5f7; --panel: #ffffff; --panel-2: #fafbfc;
@@ -47,6 +53,7 @@
     --border: #e3e6ea; --border-strong: #cfd4da;
     --shadow: 0 1px 2px rgba(20,25,30,.06), 0 4px 14px rgba(20,25,30,.05);
     --accent-soft: color-mix(in srgb, var(--accent) 13%, transparent); --lot: #7c5cff;
+    --st-doing: #a86b00; --st-pr: #2c82bb; --st-done: #005f94; --st-park: #6f7f94; --st-aband: #8a6f5c;
   }
 
   * { box-sizing: border-box; }
@@ -1138,7 +1145,7 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.21";
+const PAGE_VERSION = "1.22";
 const PAGE_VERSION_DATE = "2026-10-02";
 
 /* Dérivés de la config (ne pas éditer) */
@@ -1162,6 +1169,10 @@ const PRIO_LABEL = { P0:"P0 · critique", P1:"P1 · important", P2:"P2 · utile"
    du parc ne change de comportement, la distinction sert à la LECTURE humaine du suivi. */
 const STATS   = ["À faire","En cours","En PR","Fait","Parké","Abandonné"];
 const STAT_CLASS = { "À faire":"st-todo", "En cours":"st-doing", "En PR":"st-pr", "Fait":"st-done", "Parké":"st-park", "Abandonné":"st-aband" };
+/* ATL-185 — le signe qui double la couleur du statut (forme, pas teinte) : ○ à faire, ◐ en cours,
+   ↗ en PR, ✓ fait, ‖ parké, ✕ abandonné. Un statut inconnu n'en porte pas. */
+const STAT_GLYPH = { "À faire":"○", "En cours":"◐", "En PR":"↗", "Fait":"✓", "Parké":"‖", "Abandonné":"✕" };
+function statLabel(s){ return STAT_GLYPH[s] ? STAT_GLYPH[s]+" "+s : (s||""); }
 const STAT_ABANDON = "Abandonné";              // le statut posé par le bouton 🚫, tickets et lots
 
 /* ---- Socle du suivi : le dictionnaire des statuts, DÉRIVÉ de la config ci-dessus (ATL-046) ----
@@ -2145,7 +2156,7 @@ function buildTicketRead(e){
     `<span class="badge type">${esc(e.type||'—')}</span>`,
     `<span class="badge dom">${esc(e.dom||'—')}</span>`,
     `<span style="display:inline-flex;align-items:center;gap:5px"><span class="det-pdot ${e.prio}" style="display:inline-block"></span><b>${esc(e.prio||'—')}</b></span>`,
-    `<span class="st-select ${STAT_CLASS[e.stat]||''}">${esc(e.stat||'')}</span>`,
+    `<span class="st-select ${STAT_CLASS[e.stat]||''}">${esc(statLabel(e.stat))}</span>`,
     e.lot?`<span class="badge lot clickable" onclick="navLot('${esc(e.lot)}')">${esc(l?l.name:lotName(e.lot))}</span>`:'',
     e.codedWith?`<span class="badge">🤖 ${esc(coderLabel(e.codedWith))}</span>`:'',
     e.model?`<span class="badge" title="Modèle">🧠 ${esc(e.model)}</span>`:'',
@@ -3335,7 +3346,7 @@ function entryCard(e){
 }
 function statusSelect(e){
   const sel=el("select","st-select "+STAT_CLASS[e.stat]);
-  STATS.forEach(s=>{ const o=el("option"); o.value=s; o.textContent=s; if(s===e.stat)o.selected=true; sel.appendChild(o); });
+  STATS.forEach(s=>{ const o=el("option"); o.value=s; o.textContent=statLabel(s); if(s===e.stat)o.selected=true; sel.appendChild(o); });
   sel.onchange=()=>setStatus(e.n, sel.value);
   return sel;
 }
@@ -3491,26 +3502,32 @@ const LOT_STAGE_COLOR = { "Planifié":"var(--st-todo)", "En cours":"var(--st-doi
                           [S_MERGED]:"var(--p1)", [S_DONE]:"var(--st-done)", [STAT_ABANDON]:"var(--st-aband)" };
 /* Difficulté estimée — d'un lot (indicative) et, depuis ATL-173, de chaque ticket. Ordre = tri croissant. */
 const DIFF_ORDER = ["Facile","Moyen","Difficile"];
+/* ATL-185 — palette bleu / orange de la barre, jamais vert ni rouge ; `g` est le signe qui double la
+   couleur (niveau en points). Le texte se mélange au texte de la page (toneStyle) : assombri en clair,
+   éclairci en sombre, il garde son contraste dans les deux thèmes. */
 const DIFF_META = {
-  "Facile":    { c:"#2e9e5b", bg:"rgba(46,158,91,.14)",  b:"rgba(46,158,91,.42)" },
-  "Moyen":     { c:"#c98a00", bg:"rgba(201,138,0,.15)",  b:"rgba(201,138,0,.45)" },
-  "Difficile": { c:"#d1603d", bg:"rgba(209,96,61,.15)",  b:"rgba(209,96,61,.45)" }
+  "Facile":    { c:"#0072B2", g:"●○○" },
+  "Moyen":     { c:"#E69F00", g:"●●○" },
+  "Difficile": { c:"#C25E00", g:"●●●" }
 };
+function toneStyle(m){
+  return `color:color-mix(in srgb, ${m.c} 62%, var(--text));background:color-mix(in srgb, ${m.c} 15%, transparent);border-color:color-mix(in srgb, ${m.c} 45%, transparent)`;
+}
 function diffRank(l){ const i=DIFF_ORDER.indexOf(l&&l.difficulty||""); return i<0?99:i; }
 /* ATL-174 — la RAPIDITÉ estimée d'un ticket (Rapide, Normal, Long), à côté de la difficulté : un
    ticket difficile peut être court, un ticket facile long. Les seuils en jetons d'entrée sont
    ÉTALONNÉS sur le coût réel — tools/cout-reel.js tickets les confronte au mesuré — et dits dans
    SOCLE.md : Rapide < 6 M, Normal de 6 à 15 M, Long > 15 M (terciles de 126 tickets, 02/10/2026). */
 const RAP_ORDER = ["Rapide","Normal","Long"];
-const RAP_META = {
-  "Rapide": { c:"#2e9e5b", bg:"rgba(46,158,91,.14)",  b:"rgba(46,158,91,.42)" },
-  "Normal": { c:"#c98a00", bg:"rgba(201,138,0,.15)",  b:"rgba(201,138,0,.45)" },
-  "Long":   { c:"#d1603d", bg:"rgba(209,96,61,.15)",  b:"rgba(209,96,61,.45)" }
+const RAP_META = {   /* même palette et même logique que DIFF_META (ATL-185), signe en chevrons */
+  "Rapide": { c:"#0072B2", g:"›" },
+  "Normal": { c:"#E69F00", g:"››" },
+  "Long":   { c:"#C25E00", g:"›››" }
 };
 function rapRank(e){ const i=RAP_ORDER.indexOf(e&&e.rapidite||""); return i<0?99:i; }
 function rapBadgeHtml(e){
   const m = e && RAP_META[e.rapidite]; if(!m) return "";
-  return `<span class="ldiff" style="color:${m.c};background:${m.bg};border-color:${m.b}" title="Rapidité estimée">${esc(e.rapidite)}</span>`;
+  return `<span class="ldiff" style="${toneStyle(m)}" title="Rapidité estimée">${m.g} ${esc(e.rapidite)}</span>`;
 }
 /* ATL-175 — le modèle CONSEILLÉ se calcule, il ne se saisit pas (décision du lot L-suivi-evalue,
    02/10/2026) : une fonction pure de la difficulté du ticket, donc rien de plus à maintenir ni à
@@ -3639,7 +3656,7 @@ function renderProgress(){
 }
 function diffBadgeHtml(l){
   const m = l && DIFF_META[l.difficulty]; if(!m) return "";
-  return `<span class="ldiff" style="color:${m.c};background:${m.bg};border-color:${m.b}" title="Difficulté estimée">${esc(l.difficulty)}</span>`;
+  return `<span class="ldiff" style="${toneStyle(m)}" title="Difficulté estimée">${m.g} ${esc(l.difficulty)}</span>`;
 }
 /* ATL-046 : le statut se lit AVANT les extensions. L'ordre inverse — `builtSw` et `prState`
    d'abord — était la dernière lecture de statut qui ignorait les classes (SOCLE.md §3), et il
