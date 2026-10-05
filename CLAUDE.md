@@ -145,3 +145,9 @@ Le suivi vit dans `.claude` :
 
 **Ne jamais** lire `.claude/suivi-projet.html` en entier (≈ 257 Ko) : `Grep` puis `Read` ciblé.
 Son bloc `PROJECT` (en tête du `<script>`) porte la config du suivi ; le reste est générique.
+
+<!-- granularitePR:debut — paragraphe posé par tools/propager-suivi.js, ne pas éditer ici -->
+**Granularité des PR** : `granularitePR` = `lot` (déclarée dans le CONFIG de `.claude/suivi-projet.html`).
+Une PR par lot ; le suivi voyage dans la PR du lot, jamais dans une PR « Suivi : … » à part ; une
+correction après test est un commit de plus sur la PR ouverte.
+<!-- granularitePR:fin -->
