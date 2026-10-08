@@ -544,6 +544,15 @@
   .detbox:not(.editing) .foot-edit { display:none; }
   .detbox.editing .foot-read { display:none; }
   .ibtn.back { font-size:18px; font-weight:700; }
+  /* Fil d'Ariane d'un lot (08/10/2026) : six mots simples, chacun suivi de son terme technique */
+  .fil { display:flex; flex-wrap:wrap; gap:2px 6px; align-items:center; font-size:11px; color:var(--muted); line-height:1.5; }
+  .fil .fe { white-space:nowrap; }
+  .fil .fe small { font-size:10px; opacity:.85; }
+  .fil .fe.passe { text-decoration:line-through; opacity:.7; }
+  .fil .fe.cur { color:var(--text); font-weight:700; background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:0 7px; }
+  .fil .fe.nul { opacity:.5; font-style:italic; }
+  .fil .fsep { opacity:.5; }
+  .fil .fnote { font-style:italic; opacity:.8; }
   .metarow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .det-desc { background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:11px 12px; font-size:13px; line-height:1.5; white-space:pre-wrap; }
   .kv { display:grid; grid-template-columns:130px 1fr; gap:7px 14px; font-size:13px; }
@@ -1146,8 +1155,8 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.22";
-const PAGE_VERSION_DATE = "2026-10-02";
+const PAGE_VERSION = "1.23";
+const PAGE_VERSION_DATE = "2026-10-08";
 
 /* Dérivés de la config (ne pas éditer) */
 const DLV = PROJECT.delivery;
@@ -2211,6 +2220,7 @@ function buildLotRead(l){
   let h=`<div class="metarow"><span class="lstage" style="color:${LOT_STAGE_COLOR[stage]||'var(--muted)'}">${esc(stage)}</span>`;
   if(l.difficulty) h+=`<span class="badge dom">${esc(l.difficulty)}</span>`;
   h+=`</div>`;
+  h+=filLotHtml(l);
   h+=`<div class="det-desc">${l.goal?esc(l.goal):'<span style="color:var(--muted)">— aucun objectif —</span>'}</div>`;
   if(l.pr) h+=`<div><div class="sec-title">Pull request</div><div class="prline">${prHtml(l)}</div></div>`;
   const tix=lotEntriesForRead(l);
@@ -3681,6 +3691,46 @@ function lotStage(l){
   if(cls==="en-travail" || l.branch) return "En cours";
   return "Planifié";
 }
+/* Fil d'Ariane d'un lot — vocabulaire commun à tous les dépôts (règle du CLAUDE.md global,
+   08/10/2026). Modifié → Rangé (commit) → Envoyé (push) → Proposé (PR) → Intégré (merge) →
+   [Déployé si le projet déploie vraiment] → Terminé. L'étape courante se DÉDUIT du statut et des
+   champs PR : Rangé et Envoyé ne sont écrits nulle part dans suivi.json. Même règle que
+   FilCourante du générateur (templates/suivi-projet/generate-suivi.ps1) : les deux se corrigent
+   ensemble. */
+function filEtapes(){
+  const e=[{k:"modifie",m:"Modifié",t:""},{k:"range",m:"Rangé",t:"commit"},{k:"envoye",m:"Envoyé",t:"push"},
+           {k:"propose",m:"Proposé",t:"PR"},{k:"integre",m:"Intégré",t:"merge"}];
+  if(S_DONE==="Déployé") e.push({k:"deploye",m:"Déployé",t:"déploiement"});
+  e.push({k:"termine",m:"Terminé",t:""});
+  return e;
+}
+function filCourante(l){
+  const cls=classeLot(l.status);
+  if(cls==="hors") return "";
+  if(cls==="clos" || l.builtSw) return "termine";
+  if(l.prState==="merged" || /^Mergé/.test(l.status||"")) return "integre";
+  if(l.prState==="open" || (l.pr && !l.prState) || l.status==="En PR") return "propose";
+  if(cls==="en-travail" || l.branch || l.reprise) return "modifie";
+  if(state.entries.some(e=>e.lot===l.id && classeEntree(e)==="clos")) return "modifie";
+  return "aucune";
+}
+function filLotHtml(l){
+  const cur=filCourante(l); if(!cur) return "";
+  const direct=PROJECT.granularitePR==="direct";
+  let passe=(cur!=="aucune");
+  const parts=filEtapes().map(s=>{
+    const nul=direct && (s.k==="propose"||s.k==="integre");
+    let cls="fe";
+    if(s.k===cur){ cls+=" cur"; passe=false; }
+    else if(passe && !nul) cls+=" passe";
+    if(nul) cls+=" nul";
+    const tech=s.t?` <small>(${esc(s.t)})</small>`:"";
+    const note=nul?' <small>— sans objet ici</small>':"";
+    return `<span class="${cls}"${s.k===cur?' aria-current="step"':''}>${esc(s.m)}${tech}${note}</span>`;
+  });
+  const fin=cur==="aucune"?' <span class="fnote">(pas encore commencé)</span>':"";
+  return `<div class="fil" role="list" aria-label="Parcours du lot">${parts.join('<span class="fsep">→</span>')}${fin}</div>`;
+}
 function lotEntries(l){
   return state.entries.filter(e=>e.lot===l.id && !e.archived).sort((a,b)=>prioRank(a.prio)-prioRank(b.prio)||a.n-b.n);
 }
@@ -3801,6 +3851,7 @@ function lotCard(l, stage, matchIds){
   head.appendChild(iconBtn("clipboard","","Copier le prompt à coller dans Claude Code ou ChatGPT",()=>copyLotPrompt(l)));
   head.appendChild(iconBtn("archive","larch","Archiver ce lot (le range dans Archives ▸ Lots)",()=>archiveLot(l.id)));
   k.appendChild(head);
+  { const fh=filLotHtml(l); if(fh){ const w=el("div","lfil"); w.innerHTML=fh; k.appendChild(w); } }
   if(l.goal){ const g=el("div","lgoal"); g.textContent=l.goal; k.appendChild(g); }
   const coders=lotCoders(l);
   const attributionDue=["En PR",S_MERGED,S_DONE].includes(stage);

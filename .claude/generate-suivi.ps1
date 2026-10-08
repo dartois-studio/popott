@@ -42,7 +42,7 @@ $LotsDir = Join-Path (Split-Path $JsonPath) 'lots'
 
 # ---- Config lue depuis le bloc PROJECT du tracker HTML (valeurs de repli si absent) ----
 function Get-SuiviConfig([string]$dir) {
-  $cfg = @{ Name = 'Projet'; Prefix = 'T'; Participle = 'livré'; StageDone = '' }
+  $cfg = @{ Name = 'Projet'; Prefix = 'T'; Participle = 'livré'; StageDone = ''; Granularite = 'lot' }
   $html = Get-ChildItem -Path $dir -Filter 'suivi-projet*.html' -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -notlike '*template*' -and $_.Name -notlike '*backup*' } |
     Select-Object -First 1
@@ -53,6 +53,7 @@ function Get-SuiviConfig([string]$dir) {
     if ($txt -match '(?m)^\s*name:\s*"([^"]*)"')       { $cfg.Name = $Matches[1] }
     if ($txt -match '(?m)^\s*prefix:\s*"([^"]*)"')     { $cfg.Prefix = $Matches[1] }
     if ($txt -match '(?m)^\s*participle:\s*"([^"]*)"') { $cfg.Participle = $Matches[1] }
+    if ($txt -match '(?m)^\s*granularitePR:\s*"([^"]*)"') { $cfg.Granularite = $Matches[1] }
     if ($txt -match '(?m)^\s*stageDone:\s*"([^"]*)"')   { $cfg.StageDone = $Matches[1] }
   }
   return $cfg
@@ -62,6 +63,7 @@ if (-not $ProjectName) { $ProjectName = $cfg.Name }
 if (-not $Prefix)      { $Prefix = $cfg.Prefix }
 if (-not $Participle)  { $Participle = $cfg.Participle }
 if (-not $StageDone)   { $StageDone = $cfg.StageDone }
+$Granularite = $cfg.Granularite
 
 $state = [IO.File]::ReadAllText($JsonPath) | ConvertFrom-Json
 
@@ -196,6 +198,55 @@ function PrLabel($o) {
     'closed' { $s += ' (fermée sans merge)' }
   }
   return $s
+}
+
+# ---- Fil d'Ariane d'un lot : six mots simples, chacun suivi de son terme technique -------------
+# Vocabulaire commun à tous les dépôts (règle du CLAUDE.md global, 08/10/2026) :
+#   Modifié → Rangé (commit) → Envoyé (push) → Proposé (PR) → Intégré (merge) → Terminé.
+# « Déployé » ne s'insère avant Terminé que si le dépôt déploie vraiment (stageDone = Déployé) ;
+# sinon Intégré est la dernière étape de travail. En commits directs (granularitePR = direct),
+# Proposé et Intégré n'existent pas : ils restent affichés, marqués « sans objet ».
+# L'étape courante se DÉDUIT du statut et des champs PR : Rangé et Envoyé ne sont écrits nulle
+# part dans suivi.json, donc un lot en cours reste à « Modifié » — le fil de fin de réponse, lui,
+# les marque en direct.
+function FilEtapes() {
+  $e = @(
+    @{ k = 'modifie'; m = 'Modifié'; t = '' },
+    @{ k = 'range';   m = 'Rangé';   t = 'commit' },
+    @{ k = 'envoye';  m = 'Envoyé';  t = 'push' },
+    @{ k = 'propose'; m = 'Proposé'; t = 'PR' },
+    @{ k = 'integre'; m = 'Intégré'; t = 'merge' }
+  )
+  if ($StageDone -eq 'Déployé') { $e += @{ k = 'deploye'; m = 'Déployé'; t = 'déploiement' } }
+  $e += @{ k = 'termine'; m = 'Terminé'; t = '' }
+  return $e
+}
+function FilCourante($l) {
+  $cls = ClasseLot $l
+  if ($cls -eq 'hors') { return '' }
+  if ($cls -eq 'clos' -or $l.builtSw) { return 'termine' }
+  if ($l.prState -eq 'merged' -or [string]$l.status -like 'Mergé*') { return 'integre' }
+  if ($l.prState -eq 'open' -or ($l.pr -and -not $l.prState) -or [string]$l.status -eq 'En PR') { return 'propose' }
+  if ($cls -eq 'en-travail' -or $l.branch -or $l.reprise) { return 'modifie' }
+  # Même règle que le sommaire : un lot « Planifié » dont un ticket est déjà Fait est entamé.
+  $fait = @($entries | Where-Object { [string]$_.lot -eq [string]$l.id -and (ClasseEntree $_) -eq 'clos' })
+  if ($fait.Count) { return 'modifie' }
+  return 'aucune'
+}
+function FilLot($l) {
+  $cur = FilCourante $l
+  if (-not $cur) { return '' }
+  $parts = @(); $passe = ($cur -ne 'aucune')
+  foreach ($s in (FilEtapes)) {
+    $nom = $s.m; if ($s.t) { $nom += ' (' + $s.t + ')' }
+    $sansObjet = ($Granularite -eq 'direct') -and ($s.k -eq 'propose' -or $s.k -eq 'integre')
+    if ($sansObjet) { $nom += ' — sans objet ici' }
+    if ($s.k -eq $cur) { $parts += ('**[ ' + $nom + ' ]**'); $passe = $false }
+    elseif ($passe -and -not $sansObjet) { $parts += ('~~' + $nom + '~~') }
+    else { $parts += $nom }
+  }
+  $fin = if ($cur -eq 'aucune') { ' _(pas encore commencé)_' } else { '' }
+  return ('Parcours : ' + ($parts -join ' → ') + $fin)
 }
 
 # ---- Projections actionnables : deux niveaux (ATL-162) ----------------------------------------
@@ -428,6 +479,7 @@ function Write-LotPage([string]$Path, $l, $open, $parked) {
   $avLot = Get-Avancement $entries $id
   if ($avLot.W) { $meta += ('{0} % fait ({1}/{2} points)' -f $avLot.Pct, $avLot.Done, $avLot.W) }   # ATL-177
   $p.Add('_' + ($meta -join ' · ') + '_'); $p.Add('')
+  $fil = FilLot $l; if ($fil) { $p.Add($fil); $p.Add('') }
 
   # La reprise ENTIÈRE : c'est ce que la séance vient chercher (ATL-004), rien n'en est coupé.
   if ($l.reprise) {
@@ -559,6 +611,7 @@ foreach ($g in $groups) {
     if ($g.lot.branch) { $meta += 'branche `' + $g.lot.branch + '`' }
     if ($g.lot.builtSw) { $meta += "$Participle le $($g.lot.builtSw)" }
     if ($meta.Count) { $out.Add('_' + ($meta -join ' · ') + '_') }
+    $fil = FilLot $g.lot; if ($fil) { $out.Add($fil) }
     if ($g.lot.reprise) { $out.Add('> ↩ **Reprise** ' + $(if ($g.lot.reprise.date) { $g.lot.reprise.date + ' — ' }) + (RepriseStr $g.lot.reprise)) }
     foreach ($dec in @($g.lot.decisions)) {
       if ($dec) { $out.Add('> 📌 ' + $(if ($dec.date) { "$($dec.date) — " }) + $dec.txt) }
