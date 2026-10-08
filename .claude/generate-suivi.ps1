@@ -205,7 +205,7 @@ function PrLabel($o) {
 #   Modifié → Rangé (commit) → Envoyé (push) → Proposé (PR) → Intégré (merge) → Terminé.
 # « Déployé » ne s'insère avant Terminé que si le dépôt déploie vraiment (stageDone = Déployé) ;
 # sinon Intégré est la dernière étape de travail. En commits directs (granularitePR = direct),
-# Proposé et Intégré n'existent pas : ils restent affichés, marqués « sans objet ».
+# Proposé et Intégré n'existent pas : ils restent affichés, marqués « pas utilisé dans ce projet ».
 # L'étape courante se DÉDUIT du statut et des champs PR : Rangé et Envoyé ne sont écrits nulle
 # part dans suivi.json, donc un lot en cours reste à « Modifié » — le fil de fin de réponse, lui,
 # les marque en direct.
@@ -240,7 +240,7 @@ function FilLot($l) {
   foreach ($s in (FilEtapes)) {
     $nom = $s.m; if ($s.t) { $nom += ' (' + $s.t + ')' }
     $sansObjet = ($Granularite -eq 'direct') -and ($s.k -eq 'propose' -or $s.k -eq 'integre')
-    if ($sansObjet) { $nom += ' — sans objet ici' }
+    if ($sansObjet) { $nom += ' — pas utilisé dans ce projet' }
     if ($s.k -eq $cur) { $parts += ('**[ ' + $nom + ' ]**'); $passe = $false }
     elseif ($passe -and -not $sansObjet) { $parts += ('~~' + $nom + '~~') }
     else { $parts += $nom }

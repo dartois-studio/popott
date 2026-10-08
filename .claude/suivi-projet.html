@@ -1155,7 +1155,7 @@ const PROJECT = {
    NE PAS la fusionner avec `socle.version`, qui versionne le CONTRAT DE DONNÉES du dépôt (quels
    champs, quels statuts) — garde du 07/09. Deux nombres, deux objets : l'infobulle du chip les
    affiche côte à côte pour que la distinction se voie au lieu de se raconter. */
-const PAGE_VERSION = "1.23";
+const PAGE_VERSION = "1.24";
 const PAGE_VERSION_DATE = "2026-10-08";
 
 /* Dérivés de la config (ne pas éditer) */
@@ -3725,7 +3725,7 @@ function filLotHtml(l){
     else if(passe && !nul) cls+=" passe";
     if(nul) cls+=" nul";
     const tech=s.t?` <small>(${esc(s.t)})</small>`:"";
-    const note=nul?' <small>— sans objet ici</small>':"";
+    const note=nul?' <small>— pas utilisé dans ce projet</small>':"";
     return `<span class="${cls}"${s.k===cur?' aria-current="step"':''}>${esc(s.m)}${tech}${note}</span>`;
   });
   const fin=cur==="aucune"?' <span class="fnote">(pas encore commencé)</span>':"";
