@@ -103,54 +103,18 @@ et du batch cooking, conversion automatique entre unités. Raisons dans `doc/03-
 
 ## Suivi projet (tickets & roadmap)
 
-Le suivi vit dans `.claude` :
+<!-- suiviRegles:debut — bloc posé par tools/propager-suivi.js, ne pas éditer ici -->
+Le suivi vit dans `.claude`. **Avant d'écrire dans le suivi, lire `.claude/regles-suivi.md`** : format de
+`suivi.json`, statuts, lots, clôture. C'est une copie identique dans tous les dépôts, posée par l'Atelier.
 
-| Fichier | Statut | Usage |
-|---|---|---|
-| `.claude/lots/<ID>.md` | dérivé **à lire** | une page par lot non clos : reprise entière, tickets, toutes les décisions |
-| `.claude/suivi-actif.md` | dérivé **à lire** | le sommaire : une ligne par lot non clos, reprises, tickets sans lot |
-| `.claude/suivi.json` | **source de vérité** | à **écrire**, par Edit ciblé — jamais à relire en entier |
-| `.claude/suivi.md` | dérivé complet | **ne jamais éditer, ni lire par défaut** |
-| `.claude/suivi-projet.html` | interface | ouvert par Guillaume dans le navigateur |
-| `.claude/suivi-captures/` | captures PNG | référencées par les tickets |
-
-**Règles :**
-
-1. « Regarde le suivi » → lire `.claude/suivi-actif.md`, puis la page du lot visé,
-   `.claude/lots/<ID>.md` — **rien d'autre**. N'ouvrir `suivi.json`
-   que pour **écrire**, par Edit ciblé ; ne jamais ouvrir le `.html` ni `suivi.md`.
-2. Toute écriture se fait dans `suivi.json`, en **conservant le format exact** : indentation
-   2 espaces, `": "` après les clés, accents littéraux, LF, **pas** de newline final. C'est le
-   format de `JSON.stringify(x, null, 2)` — le respecter évite un diff parasite à chaque tour.
-3. Après une écriture de `suivi.json`, régénérer le dérivé :
-   `powershell -ExecutionPolicy Bypass -File .claude\generate-suivi.ps1`
-4. Identifiants de tickets : `POP-001`, `POP-002`… (champ `n` dans le JSON).
-5. **`codedWith`, `model` et `difficulty` sont obligatoires avant `Fait`.** Au terme du code,
-   renseigner sur chaque ticket traité : l'IA réellement utilisée (`codedWith` : `Claude Code`,
-   `ChatGPT`, `Mixte`, ou le nom exact d'une autre), le modèle derrière l'outil (`model` :
-   `Opus 5.5`, `Sonnet 5.5`…, `Mixte` s'il y en a eu plusieurs) et la difficulté réelle du travail
-   (`difficulty` : `Facile`, `Moyen` ou `Difficile`). Un ticket ne doit jamais passer à `Fait` sans
-   les trois. `generate-suivi.ps1` nomme ceux qui en manquent. Un modèle qu'on ne connaît pas se
-   demande ou se mesure (`tools/cout-reel.js tickets`, Atelier) ; on ne l'invente pas.
-6. Statuts : `À faire` → `En cours` → `En PR` → `Fait` (+ `Parké`).
-   `En PR` = la PR attend le merge de Guillaume.
-7. Les **lots** (`state.lots`) regroupent les tickets tenant dans **une seule PR cohérente**.
-   Proposer le découpage, laisser Guillaume valider. Noter les choix tranchés dans
-   `lot.decisions` (`{date, txt}`) pour ne pas les re-débattre.
-8. Renseigner `branch` (et `pr` dès qu'elle existe) sur le lot ou le ticket : l'étape affichée
-   dans le Planning en est déduite. `powershell -File .claude\sync-pr.ps1` met à jour l'état des
-   PR depuis GitHub.
-9. **Une seule PR par lot, clôture comprise.** Le dernier commit de la PR du lot solde le suivi :
-   chaque ticket du lot passe à `Fait`, le lot à `Terminé`,
-   `pr` est renseigné, les dérivés sont régénérés. Ce commit voyage avec le code : le merge porte la
-   clôture dans `main`, une PR refermée sans merge ne l'y porte pas — `main` ne dit donc jamais clos
-   un lot qu'il ne contient pas. **Jamais de PR de solde après le merge** (le 08/10/2026, Mirokai
-   Creator : PR #13 pour le lot, puis PR #14 pour le seul solde). `merged` se rattrape par
-   `sync-pr.ps1` à la prochaine écriture du suivi.
-   Le merge est la dernière étape : rien ne reste à faire après lui.
-
-**Ne jamais** lire `.claude/suivi-projet.html` en entier (≈ 257 Ko) : `Grep` puis `Read` ciblé.
-Son bloc `PROJECT` (en tête du `<script>`) porte la config du suivi ; le reste est générique.
+- **Reprendre** : « regarde le suivi » → `.claude/suivi-actif.md`, puis la page du lot visé,
+  `.claude/lots/<ID>.md` — rien d'autre. Ne jamais lire `suivi.md` (dérivé complet) ni
+  `suivi-projet.html` (trop gros) par défaut.
+- **Écrire** : seulement dans `.claude/suivi.json`, puis régénérer les dérivés :
+  `powershell -ExecutionPolicy Bypass -File .claude\generate-suivi.ps1`.
+- **Avant `Fait`** : `codedWith`, `model` et `difficulty` sont obligatoires sur chaque ticket.
+- **Ici** : tickets `POP-001`, `POP-002`… ; un lot clos passe à `Terminé`.
+<!-- suiviRegles:fin -->
 
 <!-- granularitePR:debut — paragraphe posé par tools/propager-suivi.js, ne pas éditer ici -->
 **Granularité des PR** : `granularitePR` = `lot` (déclarée dans le CONFIG de `.claude/suivi-projet.html`).
