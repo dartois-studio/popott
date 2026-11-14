@@ -140,16 +140,23 @@ Le suivi vit dans `.claude` :
 8. Renseigner `branch` (et `pr` dès qu'elle existe) sur le lot ou le ticket : l'étape affichée
    dans le Planning en est déduite. `powershell -File .claude\sync-pr.ps1` met à jour l'état des
    PR depuis GitHub.
-9. Après le merge, il reste `rien de particulier : le merge clôt le lot` —
-   c'est Guillaume qui la déclenche, puis marque le lot `Terminé` dans l'app.
+9. **Une seule PR par lot, clôture comprise.** Le dernier commit de la PR du lot solde le suivi :
+   chaque ticket du lot passe à `Fait`, le lot à `Terminé`,
+   `pr` est renseigné, les dérivés sont régénérés. Ce commit voyage avec le code : le merge porte la
+   clôture dans `main`, une PR refermée sans merge ne l'y porte pas — `main` ne dit donc jamais clos
+   un lot qu'il ne contient pas. **Jamais de PR de solde après le merge** (le 08/10/2026, Mirokai
+   Creator : PR #13 pour le lot, puis PR #14 pour le seul solde). `merged` se rattrape par
+   `sync-pr.ps1` à la prochaine écriture du suivi.
+   Le merge est la dernière étape : rien ne reste à faire après lui.
 
 **Ne jamais** lire `.claude/suivi-projet.html` en entier (≈ 257 Ko) : `Grep` puis `Read` ciblé.
 Son bloc `PROJECT` (en tête du `<script>`) porte la config du suivi ; le reste est générique.
 
 <!-- granularitePR:debut — paragraphe posé par tools/propager-suivi.js, ne pas éditer ici -->
 **Granularité des PR** : `granularitePR` = `lot` (déclarée dans le CONFIG de `.claude/suivi-projet.html`).
-Une PR par lot ; le suivi voyage dans la PR du lot, jamais dans une PR « Suivi : … » à part ; une
-correction après test est un commit de plus sur la PR ouverte.
+Une PR par lot, clôture comprise : son dernier commit passe les tickets à `Fait` et le lot à son étape
+d'après merge — pas de PR de solde. Le suivi voyage dans la PR du lot, jamais dans une PR « Suivi : … » à
+part ; une correction après test est un commit de plus sur la PR ouverte.
 <!-- granularitePR:fin -->
 
 <!-- seancesParalleles:debut — paragraphe posé par tools/propager-suivi.js, ne pas éditer ici -->
