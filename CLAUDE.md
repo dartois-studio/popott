@@ -160,9 +160,7 @@ part ; une correction après test est un commit de plus sur la PR ouverte.
 <!-- granularitePR:fin -->
 
 <!-- seancesParalleles:debut — paragraphe posé par tools/propager-suivi.js, ne pas éditer ici -->
-**Séances parallèles** : une séance = un dépôt = une branche, avec un worktree par séance quand le dépôt
-en prévoit. Deux dépôts ne se gênent pas en git ; deux séances dans le MÊME dépôt, si — Codex et Claude
-compris (le 30/09/2026, une séance Codex a laissé 13 fichiers non committés dans l'Atelier). On ne
-propage (`propager-suivi.js --appliquer`) que si aucune autre séance n'est ouverte sur le dépôt cible.
-Quel compte Claude (Team ou Pro) sert à quel dépôt : `node tools/lieux.js` de l'Atelier, colonne Compte.
+**Séances parallèles** : une séance = un dépôt = une branche, avec un worktree par séance quand le dépôt en
+prévoit. Deux séances dans le MÊME dépôt se gênent — Codex et Claude compris. On ne propage
+(`propager-suivi.js --appliquer`) que si aucune autre séance n'est ouverte sur le dépôt cible.
 <!-- seancesParalleles:fin -->
